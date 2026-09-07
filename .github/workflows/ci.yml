@@ -5,9 +5,22 @@ on:
     branches: [main]
   pull_request:
 
+# A new push to a PR makes the in-flight run obsolete.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Turbo needs no telemetry call to do its job.
+  TURBO_TELEMETRY_DISABLED: 1
+  NEXT_TELEMETRY_DISABLED: 1
+
 jobs:
   verify:
+    name: Typecheck, test, build
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+
     steps:
       - uses: actions/checkout@v4
 
@@ -22,6 +35,11 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      # Shared packages emit real dist output; the apps import from it, so
+      # nothing downstream typechecks until this has run.
+      - name: Build packages
+        run: pnpm turbo build --filter=./packages/*
+
       - name: Typecheck
         run: pnpm typecheck
 
@@ -32,13 +50,77 @@ jobs:
       - name: Design tokens
         run: pnpm check:tokens
 
-      # A schema edit without a generated migration is a deploy-time failure,
+      - name: Build apps
+        run: pnpm build
+        env:
+          # The build only needs these to exist; it makes no network calls.
+          USE_FIXTURES: 'true'
+          WEB_BASE_URL: https://zhspress.org
+
+      # A schema edit without a committed migration is a deploy-time failure,
       # so it is caught here instead.
       - name: Migrations are up to date
         run: |
           pnpm db:generate
           if [ -n "$(git status --porcelain packages/db/migrations)" ]; then
-            echo "Schema changed without a committed migration. Run: pnpm db:generate"
+            echo "::error::Schema changed without a committed migration. Run: pnpm db:generate"
             git status --porcelain packages/db/migrations
+            exit 1
+          fi
+
+  # Runs the webhook idempotency test against a real MySQL. This is the only
+  # place the atomic-claim behaviour is actually exercised — the unit tests
+  # cover which branch runs, not what MySQL does under concurrent delivery.
+  integration:
+    name: Integration (MySQL)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: ci
+          MYSQL_DATABASE: zhs_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -pci"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      DATABASE_URL: mysql://root:ci@127.0.0.1:3306/zhs_test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build packages
+        run: pnpm turbo build --filter=./packages/*
+
+      - name: Apply migrations
+        run: pnpm db:migrate
+
+      - name: Integration tests
+        run: pnpm --filter @zhs/api test
+
+      # The suite skips rather than fails when DATABASE_URL is absent, so a
+      # green run proves nothing unless the integration test actually ran.
+      - name: Assert the integration test was not skipped
+        run: |
+          if pnpm --filter @zhs/api test 2>&1 | grep -q "settle-payment.integration.test.ts.*skipped"; then
+            echo "::error::Integration tests skipped despite DATABASE_URL being set."
             exit 1
           fi

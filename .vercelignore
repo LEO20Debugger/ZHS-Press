@@ -1,0 +1,10 @@
+# The API is not deployed to Vercel — it is a long-running Nest server and
+# needs a container host. See README, Deployment.
+apps/api
+
+# Original cover artwork; only the compressed versions ship.
+apps/web/public/covers/originals
+
+.github
+*.md
+!README.md

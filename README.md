@@ -81,6 +81,50 @@ was unreachable is much worse than an error page.
 
 Never run `drizzle-kit push` against a real environment. Migrations are a deploy step.
 
+## Deployment
+
+Two hosts, because the two apps want different things.
+
+**`apps/web` -> Vercel.** Set the project's **Root Directory** to `apps/web`;
+`vercel.json` there handles the rest, including a `turbo-ignore` step so a commit
+touching only the API does not trigger a web rebuild. Deploys come from Vercel's Git
+integration — previews on every PR, production on `main` — with GitHub Actions
+providing the quality gates. Make the CI checks **required** in branch protection, or
+Vercel will happily ship a commit whose tests failed.
+
+Environment variables to set in Vercel:
+
+| Variable | Value |
+| --- | --- |
+| `API_BASE_URL` | The deployed API origin, e.g. `https://api.zhspress.org` |
+| `WEB_BASE_URL` | `https://zhspress.org` |
+| `USE_FIXTURES` | `false` in production — see below |
+
+**`apps/api` -> a Node host** (Railway, Render, Fly.io). It is a long-running Nest
+server holding a MySQL connection pool, which is precisely what a serverless function
+is bad at: every cold start opens another pool, and the database runs out of
+connections long before the site runs out of traffic. So it does not go on Vercel.
+
+These hosts build straight from the repo — no Dockerfile needed. Point the service at
+the repo root and give it:
+
+| Setting | Value |
+| --- | --- |
+| Install | `pnpm install --frozen-lockfile` |
+| Build | `pnpm turbo build --filter=@zhs/api` |
+| Start | `node apps/api/dist/main.js` |
+
+Set `DATABASE_URL`, `JWT_SECRET`, `CORS_ORIGINS` (the Vercel domain), `WEB_BASE_URL`
+and the `FLW_*` keys. The process refuses to start if a required one is missing, so a
+half-configured deploy fails loudly instead of at the moment someone tries to pay.
+
+Run `pnpm db:migrate` as its own deploy step, never on application boot.
+
+**Before the first production deploy**, note that `USE_FIXTURES=false` means the
+storefront reads from the API, which needs a database with a catalogue in it. Until
+that exists, production will error rather than quietly serve invented products — which
+is deliberate, but it does mean the database has to come first.
+
 ## Open items
 
 Tracked in the project plan; all are blocked on people rather than code.
