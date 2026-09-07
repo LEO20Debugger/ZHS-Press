@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Tests
+        run: pnpm test
+
+      # The palette's warmth depends on never using pure white or black.
+      - name: Design tokens
+        run: pnpm check:tokens
+
+      # A schema edit without a generated migration is a deploy-time failure,
+      # so it is caught here instead.
+      - name: Migrations are up to date
+        run: |
+          pnpm db:generate
+          if [ -n "$(git status --porcelain packages/db/migrations)" ]; then
+            echo "Schema changed without a committed migration. Run: pnpm db:generate"
+            git status --porcelain packages/db/migrations
+            exit 1
+          fi

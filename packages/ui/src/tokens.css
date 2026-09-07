@@ -1,0 +1,122 @@
+/**
+ * ZHS Press design tokens.
+ *
+ * Base neutrals are measured from papier.com, not approximated. The single
+ * rule that carries most of the warmth: there is no #FFFFFF and no #000000
+ * anywhere in this system. The ground is oat, the ink is a very slightly
+ * green near-black. That one substitution is most of the difference between
+ * "premium warm" and "default Tailwind".
+ *
+ * Enforced by scripts/check-raw-colors.mjs in CI.
+ */
+
+:root {
+  /* ---- Ground and ink ------------------------------------------------- */
+  --paper: #faf7f0; /* page ground — warm oat */
+  --paper-raised: #fffefa; /* cards, surfaces above the ground */
+  --paper-deep: #f4eee0; /* alternating section bands, footer */
+  --ink: #1e2525; /* headings and body — 14.6:1 on --paper */
+  --ink-muted: #565c5c; /* metadata, captions, secondary */
+  --rule: #e2dccc; /* hairlines and borders */
+
+  /* ---- Pigment accents ------------------------------------------------
+   * Warm and paint-like, never neon. Accents are for grounds, large display
+   * text and buttons. Body copy is always --ink.
+   */
+  --terracotta: #b13f2f; /* primary action / brand accent — 5.4:1 on --paper */
+  --clay: #c97b5a;
+  --blush: #f6dfd1;
+  --sand: #e2d2ac;
+  --ink-blue: #2f4b7c; /* Light magazine's standing accent */
+  --moss: #5a6b4e;
+  --marigold: #e0a02e;
+
+  /* ---- Semantic ------------------------------------------------------- */
+  --accent: var(--terracotta);
+  --accent-tint: var(--blush);
+  --accent-contrast: var(--paper-raised); /* text placed on --accent */
+  --focus-ring: var(--ink);
+  --danger: #9b2c1c;
+  --success: #4a6741;
+
+  /* ---- Typography -----------------------------------------------------
+   * Display: Fraunces (variable, SOFT + WONK axes) — warm and playful
+   *   without tipping into childish.
+   * UI/body: Inter (variable) — the free analogue of Papier's Suisse Intl.
+   * Editorial: Newsreader — long-form blurbs and editor notes at 68ch.
+   */
+  --font-display: 'Fraunces', 'Iowan Old Style', Georgia, serif;
+  --font-ui: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-editorial: 'Newsreader', Georgia, 'Times New Roman', serif;
+
+  /* Fluid scale. Display goes genuinely large — confidence with scale is a
+     large part of what reads as premium; timid headings read as a template. */
+  --text-hero: clamp(2.5rem, 6vw, 5.5rem);
+  --text-display: clamp(2rem, 4.5vw, 3.5rem);
+  --text-h1: clamp(1.75rem, 3vw, 2.5rem);
+  --text-h2: clamp(1.375rem, 2.2vw, 1.875rem);
+  --text-h3: clamp(1.125rem, 1.6vw, 1.375rem);
+  --text-body: 1rem;
+  --text-small: 0.875rem;
+  --text-caption: 0.75rem;
+
+  --leading-tight: 1.1;
+  --leading-snug: 1.25;
+  --leading-normal: 1.55;
+  --leading-relaxed: 1.7;
+
+  --tracking-tight: -0.02em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.08em; /* all-caps UI labels */
+
+  /* ---- Space: 8pt scale ------------------------------------------------ */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+  --space-24: 6rem;
+  --space-32: 8rem;
+
+  /* ---- Layout ---------------------------------------------------------- */
+  --shell-max: 1280px;
+  --measure: 68ch; /* editorial line length */
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-pill: 999px;
+
+  /* ---- Motion — gentle and short, always short -------------------------- */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+  --duration-slow: 320ms;
+}
+
+/*
+ * The site commits to a single warm light look; there is no dark palette.
+ * `color-scheme: light` stops the browser painting its own dark ground behind
+ * the page for viewers whose OS is set to dark.
+ */
+:root {
+  color-scheme: light;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0ms;
+    --duration-base: 0ms;
+    --duration-slow: 0ms;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

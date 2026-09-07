@@ -1,0 +1,19 @@
+# Normalise line endings so a Windows checkout and a Linux CI runner produce
+# identical blobs. Without this, every file committed from Windows shows as
+# fully rewritten when someone edits it on macOS or in CI.
+* text=auto eol=lf
+
+# Binary assets must never be line-ending converted.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.avif binary
+*.woff binary
+*.woff2 binary
+*.ico binary
+*.pdf binary
+
+# Generated; collapse in review and exclude from language stats.
+pnpm-lock.yaml linguist-generated=true -diff
+packages/db/migrations/meta/*.json linguist-generated=true -diff

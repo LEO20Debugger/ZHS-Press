@@ -1,0 +1,166 @@
+/**
+ * The wire contract between apps/web and apps/api.
+ *
+ * Defined once here and used on both sides: Nest validates incoming bodies
+ * against these, and the web app infers its fetch types from the same objects.
+ * This is what stops the two apps drifting.
+ */
+
+import { z } from 'zod';
+
+/* ---- Primitives ------------------------------------------------------- */
+
+export const slugSchema = z
+  .string()
+  .min(1)
+  .max(160)
+  .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Must be lowercase words separated by single hyphens');
+
+export const emailSchema = z.string().trim().toLowerCase().email().max(320);
+
+export const hexColorSchema = z
+  .string()
+  .regex(/^#[0-9a-fA-F]{6}$/, 'Must be a six-digit hex colour, e.g. #b13f2f');
+
+export const centsSchema = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
+
+export const productTypeSchema = z.enum(['book', 'magazine', 'stationery']);
+export const productStatusSchema = z.enum([
+  'draft',
+  'coming_soon',
+  'available',
+  'sold_out',
+  'archived',
+]);
+
+/* ---- Catalogue -------------------------------------------------------- */
+
+/** Shop filtering (brief s2.4). Category maps directly onto product type. */
+export const productQuerySchema = z.object({
+  category: productTypeSchema.optional(),
+  featured: z.coerce.boolean().optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  perPage: z.coerce.number().int().min(1).max(60).default(24),
+  sort: z.enum(['newest', 'oldest', 'price_asc', 'price_desc', 'title']).default('newest'),
+});
+export type ProductQuery = z.infer<typeof productQuerySchema>;
+
+/* ---- Cart -------------------------------------------------------------
+ * Note what is absent: no price field. The client says what and how many;
+ * the server decides what it costs.
+ */
+
+export const addToCartSchema = z.object({
+  productId: z.number().int().positive(),
+  quantity: z.number().int().min(1).max(20).default(1),
+});
+export type AddToCartInput = z.infer<typeof addToCartSchema>;
+
+export const updateCartItemSchema = z.object({
+  productId: z.number().int().positive(),
+  /** Zero removes the line. */
+  quantity: z.number().int().min(0).max(20),
+});
+export type UpdateCartItemInput = z.infer<typeof updateCartItemSchema>;
+
+/* ---- Checkout --------------------------------------------------------- */
+
+export const postalAddressSchema = z.object({
+  name: z.string().trim().min(1).max(255),
+  line1: z.string().trim().min(1).max(255),
+  line2: z.string().trim().max(255).optional(),
+  city: z.string().trim().min(1).max(120),
+  region: z.string().trim().max(120).optional(),
+  postalCode: z.string().trim().min(1).max(32),
+  /** ISO 3166-1 alpha-2. */
+  country: z.string().trim().length(2).toUpperCase(),
+  phone: z.string().trim().max(32).optional(),
+});
+export type PostalAddressInput = z.infer<typeof postalAddressSchema>;
+
+export const createCheckoutSchema = z.object({
+  email: emailSchema,
+  shippingAddress: postalAddressSchema,
+  billingAddress: postalAddressSchema.optional(),
+  customerNote: z.string().trim().max(1000).optional(),
+  /** Opt into the newsletter during checkout. Unticked by default. */
+  subscribeToNewsletter: z.boolean().default(false),
+});
+export type CreateCheckoutInput = z.infer<typeof createCheckoutSchema>;
+
+/* ---- Capture: newsletter, waitlist, submissions ----------------------- */
+
+export const newsletterSignupSchema = z.object({
+  email: emailSchema,
+  source: z.string().trim().max(40).optional(),
+  /**
+   * Honeypot. Real users never fill this; bots fill every field they find.
+   * A non-empty value is accepted with a 200 and silently discarded, so the
+   * bot has nothing to learn from the response.
+   */
+  website: z.string().max(0).optional(),
+});
+export type NewsletterSignupInput = z.infer<typeof newsletterSignupSchema>;
+
+export const waitlistSignupSchema = z.object({
+  productId: z.number().int().positive(),
+  email: emailSchema,
+  website: z.string().max(0).optional(),
+});
+export type WaitlistSignupInput = z.infer<typeof waitlistSignupSchema>;
+
+export const submissionGenreSchema = z.enum([
+  'fiction',
+  'non_fiction',
+  'children',
+  'poetry',
+  'other',
+]);
+
+/** Brief s2.5: fiction, non-fiction, children's books, literary content. */
+export const createSubmissionSchema = z.object({
+  name: z.string().trim().min(1).max(255),
+  email: emailSchema,
+  genre: submissionGenreSchema,
+  title: z.string().trim().min(1).max(255),
+  synopsis: z.string().trim().min(50, 'Please write at least a short paragraph').max(5000),
+  website: z.string().max(0).optional(),
+});
+export type CreateSubmissionInput = z.infer<typeof createSubmissionSchema>;
+
+/* ---- Admin ------------------------------------------------------------ */
+
+export const adminLoginSchema = z.object({
+  email: emailSchema,
+  password: z.string().min(12).max(200),
+});
+export type AdminLoginInput = z.infer<typeof adminLoginSchema>;
+
+export const upsertProductSchema = z
+  .object({
+    slug: slugSchema,
+    type: productTypeSchema,
+    status: productStatusSchema.default('draft'),
+    title: z.string().trim().min(1).max(255),
+    subtitle: z.string().trim().max(255).optional(),
+    blurb: z.string().trim().max(2000).optional(),
+    description: z.string().max(50_000).optional(),
+    priceCents: centsSchema,
+    compareAtCents: centsSchema.optional(),
+    releaseDate: z.string().date().optional(),
+    amazonUrl: z.string().url().max(512).optional(),
+    accentHex: hexColorSchema.optional(),
+    featured: z.boolean().default(false),
+    sortOrder: z.number().int().default(0),
+    seoTitle: z.string().trim().max(255).optional(),
+    seoDescription: z.string().trim().max(320).optional(),
+  })
+  .refine((p) => p.compareAtCents == null || p.compareAtCents > p.priceCents, {
+    message: 'The compare-at price must be higher than the actual price',
+    path: ['compareAtCents'],
+  })
+  .refine((p) => p.status !== 'coming_soon' || p.releaseDate != null, {
+    message: 'A "coming soon" title needs a release date to show a waitlist against',
+    path: ['releaseDate'],
+  });
+export type UpsertProductInput = z.infer<typeof upsertProductSchema>;

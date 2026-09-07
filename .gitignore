@@ -1,0 +1,26 @@
+node_modules/
+.pnpm-store/
+dist/
+build/
+.next/
+out/
+.turbo/
+coverage/
+*.tsbuildinfo
+
+.env
+.env.local
+.env.*.local
+!.env.example
+
+.DS_Store
+Thumbs.db
+*.log
+npm-debug.log*
+storybook-static/
+playwright-report/
+test-results/
+uploads/
+
+# Original cover artwork, kept locally as the source for re-encoding.
+apps/web/public/covers/originals/
