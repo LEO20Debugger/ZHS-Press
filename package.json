@@ -18,7 +18,9 @@
     "db:seed": "pnpm --filter @zhs/db seed",
     "check:tokens": "node scripts/check-raw-colors.mjs",
     "format": "prettier --write \"**/*.{ts,tsx,md,json,css}\"",
-    "optimise:covers": "node scripts/optimise-covers.mjs"
+    "optimise:covers": "node scripts/optimise-covers.mjs",
+    "db:studio": "pnpm --filter @zhs/db studio",
+    "db:migrate:deploy": "pnpm --filter @zhs/db migrate:deploy"
   },
   "devDependencies": {
     "@types/node": "^22.10.5",

@@ -100,25 +100,18 @@ Environment variables to set in Vercel:
 | `WEB_BASE_URL` | `https://zhspress.org` |
 | `USE_FIXTURES` | `false` in production — see below |
 
-**`apps/api` -> a Node host** (Railway, Render, Fly.io). It is a long-running Nest
-server holding a MySQL connection pool, which is precisely what a serverless function
-is bad at: every cold start opens another pool, and the database runs out of
-connections long before the site runs out of traffic. So it does not go on Vercel.
+**`apps/api` -> Railway.** It is a long-running Nest server holding a MySQL
+connection pool, which is what a serverless function is worst at: every cold start
+opens another pool, and the database runs out of connections long before the site
+runs out of traffic. `railway.json` at the repo root configures the build, start,
+pre-deploy and healthcheck settings.
 
-These hosts build straight from the repo — no Dockerfile needed. Point the service at
-the repo root and give it:
+Two services are needed — a MySQL instance and the API itself — plus a handful of
+variables. **Migrations run as a Railway pre-deploy step, never on application
+boot**, so a bad migration abandons the deploy instead of leaving a half-applied
+schema behind live traffic.
 
-| Setting | Value |
-| --- | --- |
-| Install | `pnpm install --frozen-lockfile` |
-| Build | `pnpm turbo build --filter=@zhs/api` |
-| Start | `node apps/api/dist/main.js` |
-
-Set `DATABASE_URL`, `JWT_SECRET`, `CORS_ORIGINS` (the Vercel domain), `WEB_BASE_URL`
-and the `FLW_*` keys. The process refuses to start if a required one is missing, so a
-half-configured deploy fails loudly instead of at the moment someone tries to pay.
-
-Run `pnpm db:migrate` as its own deploy step, never on application boot.
+Full walkthrough, including seeding the first admin account: **[docs/deploying-the-api.md](docs/deploying-the-api.md)**.
 
 **Before the first production deploy**, note that `USE_FIXTURES=false` means the
 storefront reads from the API, which needs a database with a catalogue in it. Until

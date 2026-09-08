@@ -29,7 +29,8 @@
     "generate": "drizzle-kit generate",
     "migrate": "tsx src/migrate.ts",
     "studio": "drizzle-kit studio",
-    "seed": "tsx src/seed.ts"
+    "seed": "tsx src/seed.ts",
+    "migrate:deploy": "node dist/migrate.js"
   },
   "dependencies": {
     "drizzle-orm": "^0.38.3",
