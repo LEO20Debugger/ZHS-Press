@@ -1,5 +1,5 @@
 import 'reflect-metadata';
-import { Logger, ValidationPipe } from '@nestjs/common';
+import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import cookieParser from 'cookie-parser';
@@ -27,9 +27,16 @@ async function bootstrap(): Promise<void> {
     credentials: true,
   });
 
-  app.useGlobalPipes(
-    new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }),
-  );
+  /*
+   * No global ValidationPipe.
+   *
+   * Nest's ValidationPipe needs class-validator and class-transformer as peer
+   * dependencies, and throws at boot without them. It would also validate
+   * nothing here: every request body and query is checked by ZodValidationPipe
+   * against the schemas in @zhs/shared, and numeric coercion is handled by
+   * z.coerce. Installing two packages to satisfy a pipe with no work to do
+   * would be the wrong way round.
+   */
 
   /*
    * Session cookies are marked Secure only when NODE_ENV is 'production'. A
