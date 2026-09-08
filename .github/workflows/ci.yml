@@ -24,9 +24,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Version comes from package.json#packageManager — declaring it here too
+      # makes action-setup@v4 fail with ERR_PNPM_BAD_PM_VERSION.
       - uses: pnpm/action-setup@v4
-        with:
-          version: 9
 
       - uses: actions/setup-node@v4
         with:
@@ -96,9 +96,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Version comes from package.json#packageManager — declaring it here too
+      # makes action-setup@v4 fail with ERR_PNPM_BAD_PM_VERSION.
       - uses: pnpm/action-setup@v4
-        with:
-          version: 9
 
       - uses: actions/setup-node@v4
         with:
@@ -113,14 +113,18 @@ jobs:
       - name: Apply migrations
         run: pnpm db:migrate
 
+      # Run once, capture the output, then assert against it. Running the suite
+      # a second time just to grep it doubles the job and can disagree with the
+      # first run.
       - name: Integration tests
-        run: pnpm --filter @zhs/api test
+        run: pnpm --filter @zhs/api test 2>&1 | tee /tmp/api-test.log
 
       # The suite skips rather than fails when DATABASE_URL is absent, so a
       # green run proves nothing unless the integration test actually ran.
       - name: Assert the integration test was not skipped
         run: |
-          if pnpm --filter @zhs/api test 2>&1 | grep -q "settle-payment.integration.test.ts.*skipped"; then
+          if grep -q "settle-payment.integration.test.ts.*skipped" /tmp/api-test.log; then
             echo "::error::Integration tests skipped despite DATABASE_URL being set."
             exit 1
           fi
+          echo "Integration tests ran against MySQL."
