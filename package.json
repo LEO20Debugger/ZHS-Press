@@ -20,7 +20,9 @@
     "format": "prettier --write \"**/*.{ts,tsx,md,json,css}\"",
     "optimise:covers": "node scripts/optimise-covers.mjs",
     "db:studio": "pnpm --filter @zhs/db studio",
-    "db:migrate:deploy": "pnpm --filter @zhs/db migrate:deploy"
+    "db:migrate:deploy": "pnpm --filter @zhs/db migrate:deploy",
+    "db:admin": "pnpm --filter @zhs/db admin",
+    "db:admin:deploy": "pnpm --filter @zhs/db admin:deploy"
   },
   "devDependencies": {
     "@types/node": "^22.10.5",

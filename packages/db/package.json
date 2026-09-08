@@ -30,7 +30,9 @@
     "migrate": "tsx src/migrate.ts",
     "studio": "drizzle-kit studio",
     "seed": "tsx src/seed.ts",
-    "migrate:deploy": "node dist/migrate.js"
+    "migrate:deploy": "node dist/migrate.js",
+    "admin": "tsx src/create-admin.ts",
+    "admin:deploy": "node dist/create-admin.js"
   },
   "dependencies": {
     "drizzle-orm": "^0.38.3",
