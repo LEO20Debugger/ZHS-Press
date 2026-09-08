@@ -9,6 +9,15 @@ import { z } from 'zod';
  */
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+
+  /**
+   * Most managed hosts (Railway, Render, Heroku) assign a port through `PORT`
+   * and health-check that exact port. Binding anything else means the app runs
+   * fine and the platform still reports it as unhealthy.
+   *
+   * `PORT` wins where the platform sets it; `API_PORT` stays for local use.
+   */
+  PORT: z.coerce.number().int().positive().optional(),
   API_PORT: z.coerce.number().int().positive().default(4000),
   CORS_ORIGINS: z
     .string()
@@ -17,6 +26,11 @@ const envSchema = z.object({
       value
         .split(',')
         .map((origin) => origin.trim())
+        // A browser sends Origin with no path, so "https://site.com/" never
+        // matches and every request is blocked — with an error that points at
+        // CORS rather than at the stray slash. Strip it rather than rely on
+        // whoever fills in the dashboard.
+        .map((origin) => origin.replace(/\/+$/, ''))
         .filter(Boolean),
     ),
 
@@ -43,8 +57,33 @@ const envSchema = z.object({
 
 export type Env = z.infer<typeof envSchema>;
 
+/** The port to bind: the platform's assignment if present, else the local default. */
+export function resolvePort(env: Env): number {
+  return env.PORT ?? env.API_PORT;
+}
+
+/**
+ * Drops keys whose value is an empty string.
+ *
+ * Zod's `.default()` and `.optional()` only apply to `undefined`. An empty
+ * string is a *present* value, so it gets validated and rejected — which is
+ * how a blank NODE_ENV injected by the host takes down a boot that should have
+ * fallen back to the default.
+ *
+ * Deployment platforms, Docker and CI runners all set empty variables freely,
+ * so an unset variable and a blank one are treated the same here.
+ */
+function withoutBlanks(raw: Record<string, unknown>): Record<string, unknown> {
+  const cleaned: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(raw)) {
+    if (typeof value === 'string' && value.trim() === '') continue;
+    cleaned[key] = value;
+  }
+  return cleaned;
+}
+
 export function validateEnv(raw: Record<string, unknown>): Env {
-  const result = envSchema.safeParse(raw);
+  const result = envSchema.safeParse(withoutBlanks(raw));
 
   if (!result.success) {
     const issues = result.error.issues
