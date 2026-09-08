@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { formatMoney } from '@zhs/shared';
 import type { ProductSummary } from '@zhs/shared';
 import { accentStyle, Sticker } from './primitives';
+import { Reveal } from './reveal';
 
 /** Books, issues and stationery all live at the same URL shape as the shop. */
 export function productHref(product: Pick<ProductSummary, 'slug' | 'type'>): string {
@@ -61,7 +62,7 @@ export function ProductCard({ product }: { product: ProductSummary }) {
           </div>
         )}
 
-        <div className="absolute left-3 top-3">
+        <div className="sticker-settle absolute left-3 top-3">
           <StatusSticker status={product.status} />
         </div>
       </div>
@@ -111,10 +112,14 @@ export function ProductGrid({
 
   return (
     <ul className="grid grid-cols-2 gap-x-6 gap-y-12 md:grid-cols-3 lg:grid-cols-4">
-      {products.map((product) => (
-        <li key={product.id}>
+      {products.map((product, index) => (
+        /*
+          Capped at the sixth item: past that the stagger stops reading as a
+          sequence and starts reading as the page being slow.
+        */
+        <Reveal as="li" key={product.id} delay={Math.min(index, 5) * 70}>
           <ProductCard product={product} />
-        </li>
+        </Reveal>
       ))}
     </ul>
   );

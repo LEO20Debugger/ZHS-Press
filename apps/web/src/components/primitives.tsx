@@ -19,14 +19,27 @@ export function accentStyle(accent: AccentPairing | null): CSSProperties {
   } as CSSProperties;
 }
 
-/** A hand-drawn rule. Deliberately not a 1px border — those read as software. */
-export function HandDrawnRule({ className = '' }: { className?: string }) {
+/**
+ * A hand-drawn rule. Deliberately not a 1px border — those read as software.
+ *
+ * With `animate`, the stroke draws itself on left to right, the way the mark
+ * would actually be made. The dash length is set in CSS from --rule-length
+ * rather than measured at runtime, so there is no layout read and nothing to
+ * recalculate on resize.
+ */
+export function HandDrawnRule({
+  className = '',
+  animate = true,
+}: {
+  className?: string;
+  animate?: boolean;
+}) {
   return (
     <svg
       viewBox="0 0 300 8"
       preserveAspectRatio="none"
       aria-hidden="true"
-      className={`h-2 w-full ${className}`}
+      className={`h-2 w-full ${animate ? 'rule-draw' : ''} ${className}`}
     >
       <path
         d="M1 4.2c38-2.3 62 1.4 99 .3 37-1.1 58-2.6 96-1.1 25 1 62 2.4 103 1.2"
@@ -113,7 +126,7 @@ type ButtonProps = {
 };
 
 const BUTTON_BASE =
-  'inline-flex items-center justify-center gap-2 rounded-pill px-6 py-3 font-ui ' +
+  'press inline-flex items-center justify-center gap-2 rounded-pill px-6 py-3 font-ui ' +
   'text-small font-medium tracking-wide uppercase transition-colors duration-base ease-out ' +
   'disabled:cursor-not-allowed disabled:opacity-50';
 

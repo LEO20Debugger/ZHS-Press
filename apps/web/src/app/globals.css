@@ -159,3 +159,186 @@
     background-size: 100% 1px;
   }
 }
+
+/* ---------------------------------------------------------------------------
+ * Motion
+ *
+ * Three rules this obeys throughout:
+ *
+ * 1. Only `transform` and `opacity` are animated. Both are handled by the
+ *    compositor, so nothing here triggers layout or paint and nothing can
+ *    cause cumulative layout shift.
+ * 2. Content is never hidden unless JavaScript is present to reveal it again.
+ *    The `.js` class is set by an inline script before first paint, so a
+ *    reader with JS disabled — or a crawler — sees everything immediately
+ *    rather than a blank page.
+ * 3. `prefers-reduced-motion` shows the final state at once. Not a shorter
+ *    animation: no animation.
+ * ------------------------------------------------------------------------ */
+
+@layer components {
+  /* -- Scroll reveal ------------------------------------------------------ */
+
+  .js .reveal {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0);
+    transition:
+      opacity 600ms var(--ease-out),
+      transform 600ms var(--ease-out);
+    /* Set per item by the Reveal component to stagger a group. */
+    transition-delay: var(--reveal-delay, 0ms);
+    will-change: opacity, transform;
+  }
+
+  .js .reveal[data-revealed='true'] {
+    opacity: 1;
+    transform: none;
+    will-change: auto;
+  }
+
+  /* -- Hero entrance ------------------------------------------------------
+   * Runs on load rather than on scroll: it is already in view, and waiting
+   * for an observer callback would show a beat of empty page first.
+   */
+  .js .rise {
+    animation: rise 800ms var(--ease-out) both;
+    animation-delay: var(--rise-delay, 0ms);
+  }
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translate3d(0, 18px, 0);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  /* -- Hand-drawn rule ----------------------------------------------------
+   * The rule draws itself on, left to right, the way it would be drawn by
+   * hand. This is the one flourish in the system that is purely decorative,
+   * and it earns its place because the mark is already hand-drawn.
+   */
+  /*
+   * Only a rule that something will actually draw starts hidden.
+   *
+   * [data-revealed] matches a Reveal wrapper in either state, so a rule inside
+   * one keeps its dash through the transition. A rule with no animated
+   * ancestor — the footer, admin, a plain page heading — never gets a dash and
+   * is simply visible. Applying the dash unconditionally left every such rule
+   * permanently invisible.
+   */
+  .js [data-revealed] .rule-draw path,
+  .js .rise .rule-draw path,
+  .js .rise.rule-draw path {
+    stroke-dasharray: var(--rule-length, 320);
+    stroke-dashoffset: var(--rule-length, 320);
+  }
+
+  .js [data-revealed='true'] .rule-draw path,
+  .js .rise .rule-draw path,
+  .js .rise.rule-draw path {
+    animation: draw 900ms var(--ease-out) 150ms forwards;
+  }
+
+  @keyframes draw {
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+
+  /* -- Sticker ------------------------------------------------------------
+   * Settles into its off-axis angle rather than starting there, so it reads
+   * as having been placed.
+   */
+  .js .sticker-settle {
+    animation: settle 520ms var(--ease-out) 260ms both;
+  }
+
+  @keyframes settle {
+    from {
+      opacity: 0;
+      transform: rotate(4deg) scale(0.9);
+    }
+    to {
+      opacity: 1;
+      transform: rotate(-3deg) scale(1);
+    }
+  }
+
+  /* -- Page enter ---------------------------------------------------------
+   * A short lift on navigation. Deliberately subtle: a long page transition
+   * is the fastest way to make a fast site feel slow.
+   */
+  .js .page-enter {
+    animation: page-enter 420ms var(--ease-out) both;
+  }
+
+  @keyframes page-enter {
+    from {
+      opacity: 0;
+      transform: translate3d(0, 8px, 0);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  /* -- Interaction --------------------------------------------------------- */
+
+  /* Buttons and cards give slightly under the cursor. */
+  .press {
+    transition: transform var(--duration-fast) var(--ease-out);
+  }
+
+  .press:active {
+    transform: translateY(1px) scale(0.99);
+  }
+
+  /* The cover lifts a touch as well as scaling, so the card feels picked up. */
+  .group:hover .cover-frame img {
+    transform: scale(1.04) translateY(-4px);
+  }
+}
+
+/*
+ * Reduced motion: every animated element jumps straight to its final state.
+ * This has to override the .js rules above, hence the specificity and the
+ * !important — a reader who has asked for no motion gets none, including the
+ * initial hidden state, which would otherwise leave content invisible.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .js .reveal,
+  .js .reveal[data-revealed='true'] {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+
+  .js .rise,
+  .js .page-enter,
+  .js .sticker-settle {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .js .sticker-settle {
+    transform: rotate(-3deg) !important;
+  }
+
+  .js .rule-draw path,
+  .js [data-revealed] .rule-draw path,
+  .js .rise .rule-draw path {
+    stroke-dasharray: none !important;
+    stroke-dashoffset: 0 !important;
+    animation: none !important;
+  }
+
+  .group:hover .cover-frame img {
+    transform: none !important;
+  }
+}

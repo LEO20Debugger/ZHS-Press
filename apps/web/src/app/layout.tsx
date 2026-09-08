@@ -55,7 +55,30 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${fraunces.variable} ${inter.variable} ${newsreader.variable}`}>
+    <html
+      lang="en"
+      className={`${fraunces.variable} ${inter.variable} ${newsreader.variable}`}
+      /*
+       * The inline script below adds a `js` class to this element before React
+       * hydrates, which React would otherwise report as a mismatch. Scoped to
+       * this element's own attributes — children are still checked normally.
+       */
+      suppressHydrationWarning
+    >
+      <head>
+        {/*
+          Marks the document as JavaScript-capable before first paint.
+          Every hidden-then-revealed animation state is scoped behind this
+          class, so a reader without JS — or a crawler — gets the finished
+          page immediately instead of a blank one. Inline and synchronous on
+          purpose: a deferred script would let the unstyled state paint first.
+        */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: "document.documentElement.classList.add('js')",
+          }}
+        />
+      </head>
       <body className="paper-grain min-h-screen">{children}</body>
     </html>
   );

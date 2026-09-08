@@ -3,6 +3,7 @@ import { formatMoney } from '@zhs/shared';
 import type { ProductDetail } from '@zhs/shared';
 import { AddToCart } from './add-to-cart';
 import { accentStyle, Button, Eyebrow, HandDrawnRule, Sticker } from './primitives';
+import { Reveal } from './reveal';
 import { WaitlistForm } from './waitlist-form';
 
 function DetailRow({ label, value }: { label: string; value: string | number | null }) {
@@ -86,7 +87,7 @@ export function ProductDetailView({ product }: { product: ProductDetail }) {
       */}
       <div className="bg-accent-tint pb-16 pt-12 md:pb-24 md:pt-16">
         <div className="shell grid gap-12 md:grid-cols-2 md:gap-16">
-          <div className="cover-frame group relative mx-auto w-full max-w-md bg-paper-raised">
+          <div className="cover-frame rise group relative mx-auto w-full max-w-md bg-paper-raised">
             {cover ? (
               // The largest contentful paint on this page: priority, never lazy.
               <Image
@@ -100,7 +101,7 @@ export function ProductDetailView({ product }: { product: ProductDetail }) {
               />
             ) : null}
             {product.status !== 'available' ? (
-              <div className="absolute left-4 top-4">
+              <div className="sticker-settle absolute left-4 top-4">
                 <Sticker tone={product.status === 'sold_out' ? 'quiet' : 'accent'}>
                   {product.status === 'sold_out' ? 'Sold out' : 'Coming soon'}
                 </Sticker>
@@ -108,7 +109,10 @@ export function ProductDetailView({ product }: { product: ProductDetail }) {
             ) : null}
           </div>
 
-          <div className="flex flex-col justify-center">
+          <div
+            className="rise flex flex-col justify-center"
+            style={{ '--rise-delay': '140ms' } as React.CSSProperties}
+          >
             <Eyebrow>{typeLabel(product)}</Eyebrow>
             <h1 className="mt-4 text-display">{product.title}</h1>
             {product.subtitle ? (
@@ -141,7 +145,7 @@ export function ProductDetailView({ product }: { product: ProductDetail }) {
       </div>
 
       <div className="shell grid gap-16 py-16 md:grid-cols-[1.4fr_1fr] md:py-24">
-        <div>
+        <Reveal>
           {product.description ? (
             <>
               <h2 className="font-display text-h2">About this {typeNoun(product)}</h2>
@@ -179,9 +183,9 @@ export function ProductDetailView({ product }: { product: ProductDetail }) {
               </ul>
             </div>
           ) : null}
-        </div>
+        </Reveal>
 
-        <aside>
+        <Reveal as="aside" delay={90}>
           <h2 className="eyebrow">Details</h2>
           <dl className="mt-4">
             {product.book ? (
@@ -216,7 +220,7 @@ export function ProductDetailView({ product }: { product: ProductDetail }) {
           <p className="mt-8 text-caption text-ink-muted">
             Shipping is calculated at checkout. Worldwide delivery.
           </p>
-        </aside>
+        </Reveal>
       </div>
     </article>
   );
