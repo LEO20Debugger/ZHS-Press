@@ -115,11 +115,33 @@ export async function listIssues(): Promise<ProductSummary[]> {
   return apiGet<ProductSummary[]>('/products/issues');
 }
 
+/**
+ * Slugs to pre-render at build time, for generateStaticParams and sitemap.xml.
+ *
+ * This is the one read that degrades instead of throwing. An unreachable API
+ * during a *page render* should surface as an error — serving a page that
+ * quietly omits products is worse than serving none. But an unreachable API
+ * during `generateStaticParams` would fail the entire deploy, and returning an
+ * empty list is both safer and correct: Next then renders those routes on
+ * demand rather than ahead of time, so the site still works and simply
+ * pre-renders less.
+ *
+ * Without this, a momentary API blip during a deploy takes down the whole
+ * build rather than degrading one optimisation.
+ */
 export async function listAllSlugs(): Promise<Array<{ slug: string; type: ProductType }>> {
   if (USE_FIXTURES) {
     return FIXTURE_SUMMARIES.map(({ slug, type }) => ({ slug, type }));
   }
 
-  const { items } = await listProducts({ perPage: 60 });
-  return items.map(({ slug, type }) => ({ slug, type }));
+  try {
+    const { items } = await listProducts({ perPage: 60 });
+    return items.map(({ slug, type }) => ({ slug, type }));
+  } catch (error) {
+    console.warn(
+      `[catalog] Could not reach the API for pre-rendering; these routes will be ` +
+        `rendered on demand instead. ${(error as Error).message}`,
+    );
+    return [];
+  }
 }

@@ -3,7 +3,6 @@
   "framework": "nextjs",
   "installCommand": "cd ../.. && pnpm install --frozen-lockfile",
   "buildCommand": "cd ../.. && pnpm turbo build --filter=@zhs/web",
-  "ignoreCommand": "npx turbo-ignore @zhs/web",
   "github": {
     "silent": true
   }
