@@ -102,7 +102,7 @@ export function ProductDetailView({ product }: { product: ProductDetail }) {
             ) : null}
             {product.status !== 'available' ? (
               <div className="sticker-settle absolute left-4 top-4">
-                <Sticker tone={product.status === 'sold_out' ? 'quiet' : 'accent'}>
+                <Sticker tone={product.status === 'sold_out' ? 'quiet' : 'ink'}>
                   {product.status === 'sold_out' ? 'Sold out' : 'Coming soon'}
                 </Sticker>
               </div>

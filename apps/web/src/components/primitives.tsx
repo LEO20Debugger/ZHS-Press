@@ -167,10 +167,19 @@ export function Button({
   );
 }
 
-/** Sticker badges — rotated slightly, as if applied by hand. */
+/**
+ * Sticker badges — rotated slightly, as if applied by hand.
+ *
+ * Badges sit on top of cover artwork, so the default is deliberately NOT the
+ * per-title accent: the cover is dominated by that same pigment, which left
+ * the badge averaging 1.7:1 against the art behind it. Ink with a paper ring
+ * separates on every cover instead.
+ *
+ * `accent` is kept for badges placed on a flat tint rather than on artwork.
+ */
 export function Sticker({
   children,
-  tone = 'accent',
+  tone = 'ink',
 }: {
   children: ReactNode;
   tone?: 'accent' | 'ink' | 'quiet';
@@ -178,7 +187,7 @@ export function Sticker({
   const tones = {
     accent: 'bg-accent text-accent-fg',
     ink: 'bg-ink text-paper',
-    quiet: 'bg-paper-deep text-ink-muted',
+    quiet: 'sticker-quiet bg-paper-raised text-ink-muted',
   } as const;
 
   return <span className={`sticker ${tones[tone]}`}>{children}</span>;

@@ -79,9 +79,9 @@ export default async function HomePage() {
                 ) : null}
                 <div className="sticker-settle absolute left-5 top-5">
                   {hero.status === 'coming_soon' ? (
-                    <Sticker tone="accent">Coming soon</Sticker>
+                    <Sticker>Coming soon</Sticker>
                   ) : (
-                    <Sticker tone="accent">New</Sticker>
+                    <Sticker>New</Sticker>
                   )}
                 </div>
               </div>

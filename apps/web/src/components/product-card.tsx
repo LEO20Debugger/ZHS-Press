@@ -20,7 +20,7 @@ export function productHref(product: Pick<ProductSummary, 'slug' | 'type'>): str
 function StatusSticker({ status }: { status: ProductSummary['status'] }) {
   switch (status) {
     case 'coming_soon':
-      return <Sticker tone="accent">Coming soon</Sticker>;
+      return <Sticker>Coming soon</Sticker>;
     case 'sold_out':
       return <Sticker tone="quiet">Sold out</Sticker>;
     default:
