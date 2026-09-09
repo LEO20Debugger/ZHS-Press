@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState, type DragEvent, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type DragEvent, type FormEvent } from 'react';
 import { deriveTint, validateAccent } from '@zhs/ui';
 import { Button } from '../primitives';
 
@@ -95,7 +95,25 @@ export function ProductImages({
   const [message, setMessage] = useState<string | null>(null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [dragging, setDragging] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
+
+  /*
+   * A local preview of the staged file, so you can see what you picked before
+   * committing it. Object URLs hold the file in memory until revoked, so the
+   * previous one is released whenever the selection changes or the panel
+   * unmounts.
+   */
+  useEffect(() => {
+    if (!pendingFile) {
+      setPreviewUrl(null);
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(pendingFile);
+    setPreviewUrl(objectUrl);
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [pendingFile]);
 
   /**
    * Stages a chosen file.
@@ -342,8 +360,16 @@ export function ProductImages({
           or drag one here · JPEG, PNG, WebP or AVIF · up to 12MB
         </p>
         {pendingFile ? (
-          <div className="mt-3 flex flex-wrap items-center justify-center gap-3">
-            <span className="text-caption text-ink-muted">
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-4">
+            {previewUrl ? (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img
+                src={previewUrl}
+                alt=""
+                className="h-24 w-auto border border-rule bg-paper-raised object-contain p-1"
+              />
+            ) : null}
+            <span className="max-w-[16rem] truncate text-caption text-ink-muted">
               {busy ? `Uploading ${pendingFile.name}…` : pendingFile.name}
             </span>
             {!busy ? (

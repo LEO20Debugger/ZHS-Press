@@ -13,8 +13,19 @@ const API_BASE_URL = process.env.API_BASE_URL ?? 'http://localhost:4000';
 async function proxy(request: NextRequest, path: string[]) {
   const target = `${API_BASE_URL}/api/${path.join('/')}${request.nextUrl.search}`;
 
+  /*
+   * arrayBuffer(), never text().
+   *
+   * text() decodes the body as UTF-8. For JSON that is harmless; for a
+   * multipart file upload it is destructive — every byte sequence that is not
+   * valid UTF-8 becomes U+FFFD, so the image arrives corrupted and is rejected
+   * as "not an image we can read". arrayBuffer preserves the bytes exactly and
+   * works for both.
+   */
   const body =
-    request.method === 'GET' || request.method === 'HEAD' ? undefined : await request.text();
+    request.method === 'GET' || request.method === 'HEAD'
+      ? undefined
+      : await request.arrayBuffer();
 
   let response: Response;
   try {
