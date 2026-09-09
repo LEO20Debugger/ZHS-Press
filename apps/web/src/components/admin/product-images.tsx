@@ -158,6 +158,7 @@ export function ProductImages({
   const [dragging, setDragging] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
+  const altInput = useRef<HTMLInputElement>(null);
 
   /*
    * A local preview of the staged file, so you can see what you picked before
@@ -199,7 +200,8 @@ export function ProductImages({
 
   async function upload(file: File) {
     if (!alt.trim()) {
-      setMessage('Add alt text, then press Upload.');
+      setMessage('Add alt text first — it is required. Then press Upload.');
+      altInput.current?.focus();
       return;
     }
 
@@ -439,13 +441,20 @@ export function ProductImages({
           Required. Describe the artwork for someone who cannot see it.
         </p>
         <input
+          ref={altInput}
           id="image-alt"
           value={alt}
           onChange={(event) => {
             setAlt(event.target.value);
             if (message) setMessage(null);
           }}
-          placeholder="Abstract terracotta arcs rising off the top edge"
+          /*
+           * "e.g." prefixed, because without it this placeholder reads as a
+           * filled-in value — a full, plausible sentence sitting in a text
+           * box looks answered. That is how an empty required field goes
+           * unnoticed while the button it gates stays dead.
+           */
+          placeholder="e.g. Abstract terracotta arcs rising off the top edge"
           className={`mt-2 ${FIELD}`}
         />
       </div>
@@ -502,11 +511,15 @@ export function ProductImages({
             </span>
             {!busy ? (
               <>
-                <Button
-                  variant="outline"
-                  disabled={!alt.trim()}
-                  onClick={() => void upload(pendingFile)}
-                >
+                {/*
+                  Enabled even with no alt text, deliberately.
+                  A disabled button explains nothing: it cannot be clicked, so
+                  it cannot say why, and at 50% opacity on this paper ground it
+                  does not read as disabled either — it just looks like a
+                  button that does nothing when pressed. Clicking it now moves
+                  focus to the alt field and says what is missing.
+                */}
+                <Button variant="outline" onClick={() => void upload(pendingFile)}>
                   Upload
                 </Button>
                 <button
@@ -517,6 +530,12 @@ export function ProductImages({
                   Cancel
                 </button>
               </>
+            ) : null}
+            {/* Says what is blocking the upload before it is attempted. */}
+            {!busy && !alt.trim() ? (
+              <p className="w-full text-caption text-ink-muted">
+                Alt text is needed above before this can be uploaded.
+              </p>
             ) : null}
           </div>
         ) : null}
@@ -538,7 +557,10 @@ export function ProductImages({
             placeholder="/covers/soar.jpg"
             className={FIELD}
           />
-          <Button type="submit" disabled={busy || !url || !alt} variant="outline">
+          {/* Same trap as the Upload button: missing alt text is reported, not
+              silently enforced by a dead control. Only an in-flight request
+              disables this. */}
+          <Button type="submit" disabled={busy} variant="outline">
             Add
           </Button>
         </form>
