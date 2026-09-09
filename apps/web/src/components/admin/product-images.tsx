@@ -98,15 +98,29 @@ export function ProductImages({
   const fileInput = useRef<HTMLInputElement>(null);
 
   /**
-   * Uploads the chosen file.
+   * Stages a chosen file.
    *
-   * Alt text is collected before the upload rather than after, so an image can
-   * never be stored without it. The API rejects a missing alt too — this is
-   * only to save a round trip.
+   * Uploads straight away when alt text is already present, otherwise holds
+   * the file and waits. An earlier version rejected the file outright, which
+   * left it selected in an input that would not fire another change event for
+   * the same file — so the panel looked broken and there was no way out of it.
    */
+  function chooseFile(file: File | undefined) {
+    if (!file) return;
+    setPendingFile(file);
+    setMessage(null);
+
+    // Always clear the input. Without this, re-picking the same file fires no
+    // change event and the panel appears dead — which is exactly what happens
+    // if the first attempt is rejected for missing alt text.
+    if (fileInput.current) fileInput.current.value = '';
+
+    if (alt.trim()) void upload(file);
+  }
+
   async function upload(file: File) {
     if (!alt.trim()) {
-      setMessage('Add alt text first — describe the image for screen readers.');
+      setMessage('Add alt text, then press Upload.');
       return;
     }
 
@@ -281,7 +295,10 @@ export function ProductImages({
         <input
           id="image-alt"
           value={alt}
-          onChange={(event) => setAlt(event.target.value)}
+          onChange={(event) => {
+            setAlt(event.target.value);
+            if (message) setMessage(null);
+          }}
           placeholder="Abstract terracotta arcs rising off the top edge"
           className={`mt-2 ${FIELD}`}
         />
@@ -301,11 +318,7 @@ export function ProductImages({
         onDrop={(event: DragEvent) => {
           event.preventDefault();
           setDragging(false);
-          const file = event.dataTransfer?.files?.[0];
-          if (file) {
-            setPendingFile(file);
-            void upload(file);
-          }
+          chooseFile(event.dataTransfer?.files?.[0]);
         }}
         className={`mt-4 border-2 border-dashed p-6 text-center transition-colors duration-base ${
           dragging ? 'border-ink bg-accent-tint' : 'border-rule'
@@ -317,13 +330,7 @@ export function ProductImages({
           type="file"
           accept="image/jpeg,image/png,image/webp,image/avif"
           className="sr-only"
-          onChange={(event) => {
-            const file = event.target.files?.[0];
-            if (file) {
-              setPendingFile(file);
-              void upload(file);
-            }
-          }}
+          onChange={(event) => chooseFile(event.target.files?.[0])}
         />
         <label
           htmlFor="image-file"
@@ -334,10 +341,30 @@ export function ProductImages({
         <p className="mt-1 text-caption text-ink-muted">
           or drag one here · JPEG, PNG, WebP or AVIF · up to 12MB
         </p>
-        {busy && pendingFile ? (
-          <p role="status" className="mt-2 text-caption">
-            Uploading {pendingFile.name}…
-          </p>
+        {pendingFile ? (
+          <div className="mt-3 flex flex-wrap items-center justify-center gap-3">
+            <span className="text-caption text-ink-muted">
+              {busy ? `Uploading ${pendingFile.name}…` : pendingFile.name}
+            </span>
+            {!busy ? (
+              <>
+                <Button
+                  variant="outline"
+                  disabled={!alt.trim()}
+                  onClick={() => void upload(pendingFile)}
+                >
+                  Upload
+                </Button>
+                <button
+                  type="button"
+                  onClick={() => setPendingFile(null)}
+                  className="link-underline text-caption text-ink-muted"
+                >
+                  Cancel
+                </button>
+              </>
+            ) : null}
+          </div>
         ) : null}
       </div>
 

@@ -8,7 +8,7 @@ import { ProductImages } from '@/components/admin/product-images';
 import { Button, Eyebrow, HandDrawnRule } from '@/components/primitives';
 
 const FIELD =
-  'w-full border border-rule bg-paper-raised px-4 py-2.5 font-ui text-small text-ink ' +
+  'field-control w-full border border-rule bg-paper-raised px-4 py-2.5 font-ui text-small text-ink ' +
   'focus:border-ink focus:outline-none';
 
 interface FormState {
@@ -57,12 +57,20 @@ function Field({
   children: React.ReactNode;
 }) {
   return (
-    <div>
+    /*
+      A full-height column with the control pushed to the bottom.
+      Grid items stretch to the tallest in their row, so when one field has a
+      hint line and its neighbour does not, mt-auto keeps both controls on the
+      same baseline instead of leaving one floating higher than the other.
+    */
+    <div className="flex h-full flex-col">
       <label htmlFor={id} className="eyebrow block">
         {label}
       </label>
       {hint ? <p className="mt-0.5 text-caption text-ink-muted">{hint}</p> : null}
-      <div className="mt-2">{children}</div>
+      {/* mt-auto is what does the aligning: it absorbs the slack a field
+          without a hint would otherwise leave above its control. */}
+      <div className="mt-auto pt-2">{children}</div>
       {error ? (
         <p role="alert" className="mt-1.5 text-caption text-danger">
           {error}

@@ -30,8 +30,14 @@ async function bootstrap(): Promise<void> {
     immutable: true,
     maxAge: '365d',
     index: false,
-    // Never let a stored file decide it is HTML or a script.
-    setHeaders: (res) => res.setHeader('X-Content-Type-Options', 'nosniff'),
+    setHeaders: (res) => {
+      // Never let a stored file decide it is HTML or a script.
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      // Lets the admin read an uploaded image into a canvas to sample its
+      // accent. Without it the canvas is tainted and getImageData throws.
+      // These files are public either way, so nothing is exposed by it.
+      res.setHeader('Access-Control-Allow-Origin', '*');
+    },
   });
   app.use(cookieParser());
 

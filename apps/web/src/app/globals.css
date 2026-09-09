@@ -82,6 +82,16 @@
 }
 
 @layer components {
+  /*
+   * A <select> and an <input> with identical padding still render at slightly
+   * different heights — the select's intrinsic line box differs. In a grid row
+   * mixing the two, that shows as a couple of pixels of misalignment. Pinning a
+   * shared min-height removes it without touching the padding scale.
+   */
+  .field-control {
+    min-height: 3rem;
+  }
+
   .shell {
     width: 100%;
     max-width: var(--shell-max);

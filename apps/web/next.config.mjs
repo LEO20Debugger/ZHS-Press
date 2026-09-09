@@ -1,3 +1,34 @@
+/*
+ * next/image refuses any remote host that is not listed here — an unlisted
+ * host fails with "Invalid src prop" rather than falling back, so uploaded
+ * artwork would 500 the page it appears on.
+ *
+ * Derived from API_BASE_URL rather than hard-coded: uploads are served by the
+ * API, and this then follows the API wherever it is deployed instead of
+ * needing a second variable kept in sync by hand.
+ */
+function assetRemotePatterns() {
+  const apiBaseUrl = process.env.API_BASE_URL;
+  if (!apiBaseUrl) return [];
+
+  try {
+    const { protocol, hostname, port } = new URL(apiBaseUrl);
+    return [
+      {
+        protocol: protocol.replace(':', ''),
+        hostname,
+        ...(port ? { port } : {}),
+        pathname: '/uploads/**',
+      },
+    ];
+  } catch {
+    // A malformed URL should not take the whole build down; local paths still
+    // work, and a broken remote image is visible immediately in review.
+    console.warn(`[next.config] API_BASE_URL is not a valid URL: ${apiBaseUrl}`);
+    return [];
+  }
+}
+
 /**
  * Security headers are defined here rather than in vercel.json so they apply
  * wherever this runs — Vercel, a container, or a local `next start`. A header
@@ -41,9 +72,7 @@ const nextConfig = {
     imageSizes: [96, 200, 300, 450],
     // Covers are immutable once published; cache the optimised variants hard.
     minimumCacheTTL: 60 * 60 * 24 * 30,
-    // When product images move to object storage, add its host here or
-    // next/image will refuse to optimise them.
-    // remotePatterns: [{ protocol: 'https', hostname: 'assets.zhspress.org' }],
+    remotePatterns: assetRemotePatterns(),
   },
 
   async headers() {

@@ -13,7 +13,7 @@ const GENRES = [
 ] as const;
 
 const FIELD_CLASS =
-  'w-full border border-rule bg-paper-raised px-4 py-3 font-ui text-small text-ink ' +
+  'field-control w-full border border-rule bg-paper-raised px-4 py-3 font-ui text-small text-ink ' +
   'placeholder:text-ink-muted focus:border-ink focus:outline-none';
 
 function Field({
@@ -30,12 +30,14 @@ function Field({
   children: React.ReactNode;
 }) {
   return (
-    <div>
+    // Full-height column so controls align across a row when only some
+    // fields carry a hint line. See the admin product form for the detail.
+    <div className="flex h-full flex-col">
       <label htmlFor={htmlFor} className="eyebrow block">
         {label}
       </label>
       {hint ? <p className="mt-1 text-caption text-ink-muted">{hint}</p> : null}
-      <div className="mt-2">{children}</div>
+      <div className="mt-auto pt-2">{children}</div>
       {error ? (
         <p role="alert" className="mt-2 text-caption text-danger">
           {error}
