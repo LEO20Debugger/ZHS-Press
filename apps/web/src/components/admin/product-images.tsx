@@ -153,7 +153,18 @@ export function ProductImages({
   const [url, setUrl] = useState('');
   const [alt, setAlt] = useState('');
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
+  /*
+   * The status line carries both outcomes, so it also carries which one it is.
+   * A refusal and a confirmation printed in identical muted grey are the same
+   * sentence to anyone scanning the panel — and the refusal is the one that
+   * needs to be seen, because something is still waiting to be done.
+   */
+  const [message, setMessage] = useState<{ text: string; tone: 'info' | 'error' } | null>(
+    null,
+  );
+
+  const say = (text: string) => setMessage({ text, tone: 'info' });
+  const fail = (text: string) => setMessage({ text, tone: 'error' });
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [dragging, setDragging] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -200,7 +211,7 @@ export function ProductImages({
 
   async function upload(file: File) {
     if (!alt.trim()) {
-      setMessage('Add alt text first — it is required. Then press Upload.');
+      fail('Add alt text first — it is required. Then press Upload.');
       altInput.current?.focus();
       return;
     }
@@ -219,12 +230,12 @@ export function ProductImages({
       try {
         payloadFile = await downscale(file);
       } catch {
-        setMessage('That image could not be read for resizing. Try a JPEG or PNG.');
+        fail('That image could not be read for resizing. Try a JPEG or PNG.');
         return;
       }
 
       if (payloadFile.size > MAX_BODY_BYTES) {
-        setMessage(
+        fail(
           `That image is still ${(payloadFile.size / 1024 / 1024).toFixed(1)}MB after ` +
             'resizing, which is over the upload limit. Save it at a smaller size and retry.',
         );
@@ -282,7 +293,7 @@ export function ProductImages({
             ? `The request was too large at ${(payloadFile.size / 1024 / 1024).toFixed(1)}MB.`
             : `Upload failed (HTTP ${response.status}). See the browser console for the response.`;
 
-        setMessage(payload?.errors?.[0]?.message ?? payload?.message ?? detail);
+        fail(payload?.errors?.[0]?.message ?? payload?.message ?? detail);
         return;
       }
 
@@ -302,14 +313,14 @@ export function ProductImages({
           const validation = validateAccent(hex);
           if (validation.valid) {
             onAccentSampled(hex);
-            setMessage(
+            say(
               `Uploaded. Accent set to ${hex} from the artwork — pairs with ` +
                 `${validation.foreground} at ${validation.ratio.toFixed(2)}:1.`,
             );
             return;
           }
         }
-        setMessage('Uploaded. Could not read a usable accent colour from it.');
+        say('Uploaded. Could not read a usable accent colour from it.');
       } finally {
         URL.revokeObjectURL(objectUrl);
       }
@@ -317,7 +328,7 @@ export function ProductImages({
       // The request never completed: offline, a dropped connection, or the
       // browser aborting it. Nothing server-side records this one either.
       console.error('[upload] request failed before a response arrived', error);
-      setMessage('Could not reach the server. See the browser console for details.');
+      fail('Could not reach the server. See the browser console for details.');
     } finally {
       setBusy(false);
     }
@@ -337,16 +348,16 @@ export function ProductImages({
 
       const payload = await response.json().catch(() => null);
       if (!response.ok) {
-        setMessage(payload?.errors?.[0]?.message ?? payload?.message ?? 'Could not add that.');
+        fail(payload?.errors?.[0]?.message ?? payload?.message ?? 'Could not add that.');
         return;
       }
 
       onChanged(payload.images ?? []);
       setUrl('');
       setAlt('');
-      setMessage('Image added.');
+      say('Image added.');
     } catch {
-      setMessage('Could not reach the server.');
+      fail('Could not reach the server.');
     } finally {
       setBusy(false);
     }
@@ -367,7 +378,7 @@ export function ProductImages({
     try {
       const hex = await sampleAccent(imageUrl);
       if (!hex) {
-        setMessage('Could not find a dominant colour in that image.');
+        fail('Could not find a dominant colour in that image.');
         return;
       }
 
@@ -375,17 +386,17 @@ export function ProductImages({
       // colour the API will reject on save.
       const validation = validateAccent(hex);
       if (!validation.valid) {
-        setMessage(`Sampled ${hex}, but it is not readable enough to use as an accent.`);
+        fail(`Sampled ${hex}, but it is not readable enough to use as an accent.`);
         return;
       }
 
       onAccentSampled(hex);
-      setMessage(
+      say(
         `Accent set to ${hex} — pairs with ${validation.foreground} at ` +
           `${validation.ratio.toFixed(2)}:1. Tint ${deriveTint(hex)}.`,
       );
     } catch {
-      setMessage('Could not read that image. Cross-origin images cannot be sampled.');
+      fail('Could not read that image. Cross-origin images cannot be sampled.');
     }
   }
 
@@ -567,13 +578,23 @@ export function ProductImages({
       </details>
 
       {/*
-        One status line for both routes. role="status" so a screen reader is
-        told the upload finished and what accent was derived, rather than the
-        result being visible only to someone watching the panel.
+        One status line for both routes.
+
+        role="alert" for a refusal, role="status" for everything else: alert
+        interrupts a screen reader with what is blocking the upload, while
+        status waits its turn — which is right for a confirmation and wrong for
+        an error nobody has been told about. The colour carries the same split
+        for everyone else, using the palette's danger token rather than a raw
+        red so it stays in the ink family the rest of the admin is drawn in.
       */}
       {message ? (
-        <p role="status" className="mt-4 text-caption text-ink-muted">
-          {message}
+        <p
+          role={message.tone === 'error' ? 'alert' : 'status'}
+          className={`mt-4 text-caption ${
+            message.tone === 'error' ? 'font-medium text-danger' : 'text-ink-muted'
+          }`}
+        >
+          {message.text}
         </p>
       ) : null}
     </div>

@@ -77,15 +77,25 @@ export default function AdminProductsPage() {
           className="mt-8 overflow-x-auto"
           onScroll={() => setPreview(null)}
         >
-          <table className="w-full min-w-[720px] border-collapse text-small">
+          <table className="w-full border-collapse text-small sm:min-w-[720px]">
             <thead>
               <tr className="border-b border-ink text-left">
+                {/*
+                  Type, Stock and Amazon drop out below sm, leaving what a
+                  phone is actually used for: finding a title and seeing
+                  whether it is published and at what price. Six columns cannot
+                  be read on a 390px screen, and a table that has to be dragged
+                  sideways to answer "is this one live?" is worse than one that
+                  answers it directly. All three are one tap away on the product
+                  itself — Amazon parity has a page of its own — and all three
+                  return at sm.
+                */}
                 <th scope="col" className="py-3 pr-4 font-ui font-medium">Title</th>
-                <th scope="col" className="py-3 pr-4 font-ui font-medium">Type</th>
+                <th scope="col" className="hidden py-3 pr-4 font-ui font-medium sm:table-cell">Type</th>
                 <th scope="col" className="py-3 pr-4 font-ui font-medium">Status</th>
                 <th scope="col" className="py-3 pr-4 font-ui font-medium">Price</th>
-                <th scope="col" className="py-3 pr-4 font-ui font-medium">Stock</th>
-                <th scope="col" className="py-3 font-ui font-medium">Amazon</th>
+                <th scope="col" className="hidden py-3 pr-4 font-ui font-medium sm:table-cell">Stock</th>
+                <th scope="col" className="hidden py-3 font-ui font-medium sm:table-cell">Amazon</th>
               </tr>
             </thead>
             <tbody>
@@ -117,15 +127,26 @@ export default function AdminProductsPage() {
                       </span>
                     </Link>
                   </td>
-                  <td className="py-3 pr-4 text-ink-muted">{row.type}</td>
+                  <td className="hidden py-3 pr-4 text-ink-muted sm:table-cell">{row.type}</td>
                   <td className="py-3 pr-4">
-                    <span className={`rounded-pill px-2 py-0.5 text-caption ${STATUS_TONE[row.status] ?? ''}`}>
+                    {/*
+                      inline-block and no wrapping: "coming soon" broke across
+                      two lines in the narrow mobile column, and a pill split
+                      down the middle stops looking like a pill at all.
+                    */}
+                    <span
+                      className={`inline-block whitespace-nowrap rounded-pill px-2 py-0.5 text-caption ${
+                        STATUS_TONE[row.status] ?? ''
+                      }`}
+                    >
                       {row.status.replace('_', ' ')}
                     </span>
                   </td>
                   <td className="py-3 pr-4">{formatMoney(row.priceCents, 'USD')}</td>
-                  <td className="py-3 pr-4 text-ink-muted">{row.inventory?.quantity ?? '—'}</td>
-                  <td className="py-3">
+                  <td className="hidden py-3 pr-4 text-ink-muted sm:table-cell">
+                    {row.inventory?.quantity ?? '—'}
+                  </td>
+                  <td className="hidden py-3 sm:table-cell">
                     {row.amazonUrl ? (
                       <span className="text-moss">Linked</span>
                     ) : (

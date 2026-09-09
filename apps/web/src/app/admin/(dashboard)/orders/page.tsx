@@ -67,16 +67,22 @@ export default function AdminOrdersPage() {
         <p className="mt-8 text-small text-ink-muted">No orders yet.</p>
       ) : (
         <div className="mt-8 overflow-x-auto">
-          <table className="w-full min-w-[720px] border-collapse text-small">
+          <table className="w-full border-collapse text-small sm:min-w-[720px]">
             <thead>
               <tr className="border-b border-ink text-left">
                 <th scope="col" className="py-3 pr-4 font-ui font-medium">
                   Order
                 </th>
-                <th scope="col" className="py-3 pr-4 font-ui font-medium">
+                {/*
+                  Email and the item count drop out below sm. An email address
+                  is the widest thing in this table and the least useful for
+                  the one job done from a phone — seeing what is paid and
+                  marking it fulfilled. Both return at sm.
+                */}
+                <th scope="col" className="hidden py-3 pr-4 font-ui font-medium sm:table-cell">
                   Email
                 </th>
-                <th scope="col" className="py-3 pr-4 font-ui font-medium">
+                <th scope="col" className="hidden py-3 pr-4 font-ui font-medium sm:table-cell">
                   Items
                 </th>
                 <th scope="col" className="py-3 pr-4 font-ui font-medium">
@@ -92,8 +98,8 @@ export default function AdminOrdersPage() {
               {orders.map((order) => (
                 <tr key={order.orderNumber} className="border-b border-rule">
                   <td className="py-3 pr-4 font-ui">{order.orderNumber}</td>
-                  <td className="py-3 pr-4 text-ink-muted">{order.email}</td>
-                  <td className="py-3 pr-4 text-ink-muted">
+                  <td className="hidden py-3 pr-4 text-ink-muted sm:table-cell">{order.email}</td>
+                  <td className="hidden py-3 pr-4 text-ink-muted sm:table-cell">
                     {order.items.reduce((sum, item) => sum + item.quantity, 0)}
                   </td>
                   <td className="py-3 pr-4">{formatMoney(order.totalCents, 'USD')}</td>
