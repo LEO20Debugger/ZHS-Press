@@ -15,6 +15,67 @@ const FIELD =
   'w-full border border-rule bg-paper-raised px-3 py-2 font-ui text-small text-ink ' +
   'placeholder:text-ink-muted focus:border-ink focus:outline-none';
 
+/*
+ * The upload does not go straight to the API — it goes through this app's own
+ * proxy route, which runs as a serverless function, and a serverless function
+ * on Vercel refuses any request body over 4.5MB with a platform-level 413.
+ * That happens before our code sees the request, so the API's own 12MB limit
+ * never gets a say and the failure carries no JSON to explain itself.
+ *
+ * 4MB, not 4.5: multipart framing and the base64-free but still non-trivial
+ * field overhead ride along with the file, and a limit set exactly at the
+ * cliff edge goes over it.
+ */
+const MAX_BODY_BYTES = 4 * 1024 * 1024;
+
+/** What StorageService resizes to anyway. Sending more is pure waste. */
+const MAX_EDGE = 1600;
+
+/**
+ * Shrinks an image in the browser before it is sent.
+ *
+ * The server re-encodes every upload to a JPEG no larger than 1600px on its
+ * long edge, so a 9MB phone photo is discarded down to a few hundred KB the
+ * moment it arrives. Doing that here first means the bytes that would have
+ * been thrown away never travel — which is what keeps a large original under
+ * the proxy's body limit instead of being rejected at the door.
+ *
+ * The original File is returned untouched if it is already small enough; a
+ * needless re-encode would only cost a generation of quality.
+ */
+async function downscale(file: File): Promise<File> {
+  if (file.size <= MAX_BODY_BYTES) return file;
+
+  const objectUrl = URL.createObjectURL(file);
+  try {
+    const img = new Image();
+    img.src = objectUrl;
+    await img.decode();
+
+    const scale = Math.min(1, MAX_EDGE / Math.max(img.naturalWidth, img.naturalHeight));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(img.naturalWidth * scale);
+    canvas.height = Math.round(img.naturalHeight * scale);
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return file;
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob(resolve, 'image/jpeg', 0.85),
+    );
+    if (!blob) return file;
+
+    // Named .jpg to match what it now is. The server generates its own
+    // filename regardless, so this only ever shows up in the panel.
+    return new File([blob], file.name.replace(/\.[^.]+$/, '') + '.jpg', {
+      type: 'image/jpeg',
+    });
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
 /**
  * Samples the dominant pigment from cover artwork.
  *
@@ -146,8 +207,30 @@ export function ProductImages({
     setMessage(null);
 
     try {
+      /*
+       * Shrink before sending, not after. A file over the proxy's body limit
+       * is rejected by the platform with a bare 413 — no JSON, no field, no
+       * way for the panel to explain itself — so it has to be kept under that
+       * limit rather than handled once it is over.
+       */
+      let payloadFile: File;
+      try {
+        payloadFile = await downscale(file);
+      } catch {
+        setMessage('That image could not be read for resizing. Try a JPEG or PNG.');
+        return;
+      }
+
+      if (payloadFile.size > MAX_BODY_BYTES) {
+        setMessage(
+          `That image is still ${(payloadFile.size / 1024 / 1024).toFixed(1)}MB after ` +
+            'resizing, which is over the upload limit. Save it at a smaller size and retry.',
+        );
+        return;
+      }
+
       const body = new FormData();
-      body.append('file', file);
+      body.append('file', payloadFile);
       body.append('alt', alt.trim());
 
       const response = await fetch(`/api/admin/admin/products/${productId}/images/upload`, {
