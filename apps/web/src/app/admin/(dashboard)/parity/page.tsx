@@ -33,8 +33,7 @@ export default function AdminParityPage() {
       <h1 className="mt-3 font-display text-display">Listing parity</h1>
       <HandDrawnRule className="mt-4 max-w-[180px] text-terracotta" />
       <p className="prose-editorial mt-6 text-ink-muted">
-        Every title on the site should have a matching Amazon listing. This shows what is missing;
-        download the CSV for Trust to reconcile against the Amazon backend.
+        Every title on the site should have a matching Amazon listing.
       </p>
 
       {!report ? (
