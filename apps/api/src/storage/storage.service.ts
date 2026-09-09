@@ -34,7 +34,40 @@ export class StorageService {
   }
 
   private get publicBaseUrl(): string {
-    return this.config.get('ASSET_BASE_URL', { infer: true });
+    const base = this.config.get('ASSET_BASE_URL', { infer: true });
+
+    /*
+     * A stored image URL is written into the database and served to every
+     * visitor from then on. If ASSET_BASE_URL still points at localhost in
+     * production, the upload "succeeds" and quietly persists a URL that can
+     * never load for anyone — a failure that only surfaces later, on the
+     * storefront, with nothing to connect it back to the upload.
+     *
+     * Refusing here costs one clear error instead.
+     */
+    const isProduction = this.config.get('NODE_ENV', { infer: true }) === 'production';
+    if (isProduction && /localhost|127\.0\.0\.1/.test(base)) {
+      throw new BadRequestException(
+        'ASSET_BASE_URL is still pointing at localhost. Set it to the public ' +
+          'URL uploads are served from, e.g. https://your-api.up.railway.app/uploads',
+      );
+    }
+
+    return base;
+  }
+
+  /** Logged once at boot so a misconfigured volume is visible before anyone uploads. */
+  async verifyWritable(): Promise<void> {
+    try {
+      await mkdir(this.uploadDir, { recursive: true });
+      this.logger.log(`Uploads directory ready: ${this.uploadDir}`);
+    } catch (error) {
+      this.logger.error(
+        `Uploads directory ${this.uploadDir} is not writable. ` +
+          'On Railway this must be inside a mounted volume.',
+        error as Error,
+      );
+    }
   }
 
   /**

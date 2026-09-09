@@ -6,6 +6,7 @@ import type { NestExpressApplication } from '@nestjs/platform-express';
 import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 import { resolvePort, type Env } from './config/env';
+import { StorageService } from './storage/storage.service';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
@@ -72,6 +73,10 @@ async function bootstrap(): Promise<void> {
         'Session cookies will NOT be marked Secure. Set NODE_ENV=production.',
     );
   }
+
+  // Surfaces a bad UPLOAD_DIR in the deploy log rather than on the first
+  // upload attempt, which might be days later.
+  await app.get(StorageService).verifyWritable();
 
   app.enableShutdownHooks();
 
