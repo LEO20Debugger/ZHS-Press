@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { formatMoney } from '@zhs/shared';
 import type { ProductSummary } from '@zhs/shared';
 import { accentStyle, Sticker } from './primitives';
+import { QuickAdd } from './add-to-cart';
 import { Reveal } from './reveal';
 
 /** Books, issues and stationery all live at the same URL shape as the shop. */
@@ -37,10 +38,16 @@ function StatusSticker({ status }: { status: ProductSummary['status'] }) {
  */
 export function ProductCard({ product }: { product: ProductSummary }) {
   return (
-    <Link
-      href={productHref(product)}
+    /*
+      Not a <Link> wrapping the card. A button inside a link is invalid HTML and
+      traps keyboard and screen reader users in nested interactives.
+      Instead the title link stretches over the whole card via ::after, and the
+      add button sits above it as a sibling — two separate controls, each
+      reachable by tab, with the card still clickable anywhere.
+    */
+    <div
       style={accentStyle(product.accent)}
-      className="group block focus-visible:outline-offset-4"
+      className="group relative flex h-full flex-col"
     >
       <div className="cover-frame relative aspect-cover bg-accent-tint">
         {product.coverImage ? (
@@ -67,8 +74,15 @@ export function ProductCard({ product }: { product: ProductSummary }) {
         </div>
       </div>
 
-      <div className="mt-4">
-        <h3 className="text-h3 font-display">{product.title}</h3>
+      <div className="mt-4 flex flex-1 flex-col">
+        <h3 className="text-h3 font-display">
+          <Link
+            href={productHref(product)}
+            className="after:absolute after:inset-0 after:content-[''] focus-visible:outline-offset-4"
+          >
+            {product.title}
+          </Link>
+        </h3>
         {product.attribution ? (
           <p className="mt-1 text-small text-ink-muted">{product.attribution}</p>
         ) : null}
@@ -87,8 +101,23 @@ export function ProductCard({ product }: { product: ProductSummary }) {
             </>
           )}
         </p>
+
+        {/*
+          Quick add. Only for a title that can actually be bought — a
+          coming-soon book needs the waitlist form on its own page, and a
+          sold-out issue has nothing to add. Showing a disabled button for
+          those would be noise on every card.
+
+          mt-auto pins it to the bottom so the row of buttons lines up across
+          cards with different title lengths.
+        */}
+        {product.purchasable ? (
+          <div className="relative z-10 mt-auto pt-3">
+            <QuickAdd productId={product.id} title={product.title} />
+          </div>
+        ) : null}
       </div>
-    </Link>
+    </div>
   );
 }
 

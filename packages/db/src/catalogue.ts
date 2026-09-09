@@ -1,10 +1,13 @@
 /**
  * The launch catalogue.
  *
- * Accent colours here were sampled from the actual cover artwork rather than
- * copied from the palette — the printed result drifts from what was asked for,
- * and the per-title theming is only convincing when it matches the art. Each
- * one has been checked to carry its paired foreground at WCAG AA.
+ * Accent colours are sampled from the actual cover artwork, not copied from
+ * the palette — generated art drifts from what was asked for, and the
+ * per-title theming is only convincing when it matches the cover.
+ *
+ * Re-run `pnpm sample:accents` whenever artwork changes, or a product page
+ * will theme itself in a colour its cover no longer contains. Every value here
+ * carries its paired foreground at WCAG AA.
  *
  * Copy is placeholder pending the Publishing Associate.
  */
@@ -55,8 +58,8 @@ export const CATALOGUE: CatalogueEntry[] = [
     description:
       'Soar follows Ada and her younger brother Tomi through a single long afternoon outdoors, and the small negotiations of courage that happen between siblings when no adult is watching.',
     priceCents: 1499,
-    accentHex: '#ac452c',
-    accentTintHex: '#f1e2d8',
+    accentHex: '#ab3d25',
+    accentTintHex: '#f1e1d8',
     releaseDate: '2025-06-03',
     featured: true,
     quantity: 40,
@@ -81,8 +84,8 @@ export const CATALOGUE: CatalogueEntry[] = [
     description:
       'TurnaSpurn is a folk tale in the shape of a riddle — read once for the story, again for what the story was hiding.',
     priceCents: 1699,
-    accentHex: '#627343',
-    accentTintHex: '#e8e7db',
+    accentHex: '#677749',
+    accentTintHex: '#e8e8dc',
     releaseDate: '2025-09-16',
     featured: true,
     quantity: 0,
@@ -105,8 +108,8 @@ export const CATALOGUE: CatalogueEntry[] = [
     description:
       'Bloom was written for the conversations that are hard to start. It does not rush the reader toward feeling better.',
     priceCents: 1499,
-    accentHex: '#c97c5b',
-    accentTintHex: '#f4e8de',
+    accentHex: '#d27d58',
+    accentTintHex: '#f5e8de',
     releaseDate: '2024-03-12',
     quantity: 25,
     cover: 'bloom.jpg',
@@ -129,8 +132,8 @@ export const CATALOGUE: CatalogueEntry[] = [
       'A book about self-worth for children who have started measuring themselves against other people.',
     description: 'Bright Star is about the quiet arithmetic children do about their own value.',
     priceCents: 1399,
-    accentHex: '#eba81c',
-    accentTintHex: '#f8eed7',
+    accentHex: '#f7a808',
+    accentTintHex: '#faeed4',
     releaseDate: '2023-11-07',
     quantity: 18,
     cover: 'bright-star.jpg',
@@ -152,8 +155,8 @@ export const CATALOGUE: CatalogueEntry[] = [
     blurb:
       'What gets handed down that nobody chose to hand down. Twenty-two writers and artists on inheritance.',
     priceCents: 1200,
-    accentHex: '#2b4768',
-    accentTintHex: '#e1e2e0',
+    accentHex: '#f2d2a1',
+    accentTintHex: '#f9f3e7',
     releaseDate: '2025-07-01',
     featured: true,
     quantity: 120,
@@ -175,8 +178,8 @@ export const CATALOGUE: CatalogueEntry[] = [
     subtitle: 'Repair',
     blurb: 'On mending, and on the things that are better for having been broken.',
     priceCents: 1200,
-    accentHex: '#e4cd9c',
-    accentTintHex: '#f7f2e6',
+    accentHex: '#e8cb95',
+    accentTintHex: '#f8f2e5',
     releaseDate: '2024-11-04',
     quantity: 0,
     cover: 'light-issue-3.jpg',
@@ -190,8 +193,8 @@ export const CATALOGUE: CatalogueEntry[] = [
     subtitle: 'Thresholds',
     blurb: 'Doorways, waiting rooms, and the minute before the news.',
     priceCents: 1000,
-    accentHex: '#c88564',
-    accentTintHex: '#f4e9df',
+    accentHex: '#d6825d',
+    accentTintHex: '#f6e9de',
     releaseDate: '2023-10-02',
     quantity: 0,
     cover: 'light-issue-2.jpg',
@@ -207,7 +210,7 @@ export const CATALOGUE: CatalogueEntry[] = [
     blurb:
       'A lay-flat notebook with an artist-designed cover, printed on paper that takes fountain ink without complaint.',
     priceCents: 2450,
-    accentHex: '#e9ab36',
+    accentHex: '#e6aa35',
     accentTintHex: '#f8eeda',
     quantity: 60,
     cover: 'journal-marigold.jpg',
@@ -227,8 +230,8 @@ export const CATALOGUE: CatalogueEntry[] = [
     blurb:
       'The same notebook, in a green you will want to keep on the desk rather than in a bag.',
     priceCents: 2450,
-    accentHex: '#697754',
-    accentTintHex: '#e9e8dd',
+    accentHex: '#5a6946',
+    accentTintHex: '#e7e6dc',
     quantity: 45,
     cover: 'journal-moss.jpg',
     stationery: {
