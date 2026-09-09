@@ -27,6 +27,22 @@ async function proxy(request: NextRequest, path: string[]) {
       ? undefined
       : await request.arrayBuffer();
 
+  /*
+   * One line per proxied write, into the platform's function logs.
+   *
+   * Never the body and never the headers: the cookie header carries the admin
+   * session, and logging it would put a working credential into a log store.
+   * Method, path, and byte count are enough to tell a rejected upload from one
+   * that was never sent, which is the question these logs exist to answer.
+   *
+   * Note what this CANNOT see. A request over the platform's 4.5MB body limit
+   * is refused before this function is invoked at all, so a payload-too-large
+   * leaves no trace here — its only witness is the browser.
+   */
+  const route = `${request.method} /api/${path.join('/')}`;
+  const bytes = body?.byteLength ?? 0;
+  const startedAt = Date.now();
+
   let response: Response;
   try {
     response = await fetch(target, {
@@ -41,7 +57,13 @@ async function proxy(request: NextRequest, path: string[]) {
       cache: 'no-store',
       redirect: 'manual',
     });
-  } catch {
+  } catch (error) {
+    console.error(
+      `[admin-proxy] ${route} — API unreachable at ${API_BASE_URL} ` +
+        `after ${Date.now() - startedAt}ms (${bytes} bytes sent)`,
+      error,
+    );
+
     // The API is unreachable. 502 says so honestly — a 500 here would look
     // like a bug in this app, and a 401 would wrongly suggest the session
     // was rejected.
@@ -49,6 +71,15 @@ async function proxy(request: NextRequest, path: string[]) {
       { message: 'The admin service is unavailable.' },
       { status: 502 },
     );
+  }
+
+  if (!response.ok) {
+    console.error(
+      `[admin-proxy] ${route} → ${response.status} ` +
+        `(${bytes} bytes sent, ${Date.now() - startedAt}ms)`,
+    );
+  } else if (bytes > 0) {
+    console.log(`[admin-proxy] ${route} → ${response.status} (${bytes} bytes sent)`);
   }
 
   const contentType = response.headers.get('content-type') ?? 'application/json';

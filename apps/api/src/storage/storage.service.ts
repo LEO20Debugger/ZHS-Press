@@ -90,7 +90,21 @@ export class StorageService {
    * one, which removes path traversal and collisions in a single stroke.
    */
   async storeImage(file: { buffer: Buffer; size: number }): Promise<StoredImage> {
+    /*
+     * Every exit from this method is logged, not just the successful one.
+     *
+     * A rejection here becomes a 400 the admin panel prints in one small line,
+     * which is easy to miss and impossible to inspect afterwards. The log is
+     * the durable record — and an upload that fails leaves nothing else
+     * behind, since by definition no file and no row were written.
+     */
+    this.logger.log(`Upload received: ${(file.size / 1024).toFixed(0)}KB`);
+
     if (file.size > MAX_UPLOAD_BYTES) {
+      this.logger.warn(
+        `Rejected: ${(file.size / 1024 / 1024).toFixed(1)}MB exceeds the ` +
+          `${MAX_UPLOAD_BYTES / 1024 / 1024}MB limit.`,
+      );
       throw new BadRequestException(
         `That image is ${(file.size / 1024 / 1024).toFixed(1)}MB. The limit is ${
           MAX_UPLOAD_BYTES / 1024 / 1024
@@ -103,11 +117,21 @@ export class StorageService {
     try {
       pipeline = sharp(file.buffer, { failOn: 'error' });
       metadata = await pipeline.metadata();
-    } catch {
+    } catch (error) {
+      /*
+       * The cause matters and the client message cannot carry it. Bytes that
+       * sharp cannot decode are either a genuine non-image or a body that was
+       * mangled in transit — the same 400 either way, but only one of them is
+       * a bug in this app, and the sharp error text is what separates them.
+       */
+      this.logger.warn(
+        `Rejected: sharp could not decode ${file.size} bytes — ${(error as Error).message}`,
+      );
       throw new BadRequestException('That file is not an image we can read.');
     }
 
     if (!metadata.format || !ACCEPTED.has(metadata.format)) {
+      this.logger.warn(`Rejected: unsupported format ${metadata.format ?? 'unknown'}.`);
       throw new BadRequestException(
         `Unsupported image format${metadata.format ? ` (${metadata.format})` : ''}. ` +
           'Use JPEG, PNG, WebP or AVIF.',
@@ -127,10 +151,24 @@ export class StorageService {
 
     const key = `${Date.now().toString(36)}-${randomBytes(8).toString('hex')}.jpg`;
 
-    await mkdir(this.uploadDir, { recursive: true });
-    await writeFile(join(this.uploadDir, key), output.data);
+    try {
+      await mkdir(this.uploadDir, { recursive: true });
+      await writeFile(join(this.uploadDir, key), output.data);
+    } catch (error) {
+      // A disk failure surfaces to the client as an opaque 500. Name the
+      // directory here, because the fix is almost always the volume mount
+      // rather than anything in this code.
+      this.logger.error(
+        `Failed to write ${key} to ${this.uploadDir}: ${(error as Error).message}`,
+        error as Error,
+      );
+      throw error;
+    }
 
-    this.logger.log(`Stored ${key} (${(output.info.size / 1024).toFixed(0)}KB)`);
+    this.logger.log(
+      `Stored ${key} (${(output.info.size / 1024).toFixed(0)}KB, ` +
+        `${output.info.width}x${output.info.height}) in ${this.uploadDir}`,
+    );
 
     return {
       key,

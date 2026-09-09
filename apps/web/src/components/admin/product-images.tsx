@@ -233,13 +233,41 @@ export function ProductImages({
       body.append('file', payloadFile);
       body.append('alt', alt.trim());
 
+      console.log(
+        `[upload] POST ${file.name} — ${(file.size / 1024).toFixed(0)}KB on disk, ` +
+          `${(payloadFile.size / 1024).toFixed(0)}KB sent` +
+          `${payloadFile !== file ? ' (resized in the browser)' : ''}`,
+      );
+
       const response = await fetch(`/api/admin/admin/products/${productId}/images/upload`, {
         method: 'POST',
         body,
       });
 
-      const payload = await response.json().catch(() => null);
+      /*
+       * Read the body as text and parse it here, rather than calling .json()
+       * and discarding the failure. A platform-level rejection — the 413 a
+       * request over the body limit gets — is served as plain text, so .json()
+       * throws and every trace of what actually happened is lost.
+       */
+      const raw = await response.text();
+      let payload: {
+        images?: ProductImage[];
+        message?: string;
+        errors?: Array<{ message?: string }>;
+      } | null = null;
+      try {
+        payload = JSON.parse(raw);
+      } catch {
+        // Left null; `raw` still holds whatever the platform said.
+      }
+
       if (!response.ok) {
+        console.error(
+          `[upload] HTTP ${response.status} for ${payloadFile.size} bytes — ` +
+            `${raw.slice(0, 500) || '(empty body)'}`,
+        );
+
         /*
          * Falls back to the status code rather than a bare "Upload failed".
          * A 413 from the platform's request-size limit, a 502 from an
@@ -247,15 +275,18 @@ export function ProductImages({
          * JSON body to quote, and each needs a different fix — a message that
          * cannot tell them apart sends you looking in the wrong place.
          */
-        setMessage(
-          payload?.errors?.[0]?.message ??
-            payload?.message ??
-            `Upload failed (HTTP ${response.status}).`,
-        );
+        const detail =
+          response.status === 413
+            ? `The request was too large at ${(payloadFile.size / 1024 / 1024).toFixed(1)}MB.`
+            : `Upload failed (HTTP ${response.status}). See the browser console for the response.`;
+
+        setMessage(payload?.errors?.[0]?.message ?? payload?.message ?? detail);
         return;
       }
 
-      onChanged(payload.images ?? []);
+      console.log(`[upload] stored — product now has ${payload?.images?.length ?? 0} image(s)`);
+
+      onChanged(payload?.images ?? []);
       setAlt('');
       setPendingFile(null);
       if (fileInput.current) fileInput.current.value = '';
@@ -280,8 +311,11 @@ export function ProductImages({
       } finally {
         URL.revokeObjectURL(objectUrl);
       }
-    } catch {
-      setMessage('Could not reach the server.');
+    } catch (error) {
+      // The request never completed: offline, a dropped connection, or the
+      // browser aborting it. Nothing server-side records this one either.
+      console.error('[upload] request failed before a response arrived', error);
+      setMessage('Could not reach the server. See the browser console for details.');
     } finally {
       setBusy(false);
     }
