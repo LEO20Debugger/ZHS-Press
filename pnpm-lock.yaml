@@ -59,6 +59,9 @@ importers:
       drizzle-orm:
         specifier: ^0.38.3
         version: 0.38.4(@types/react@19.2.18)(mysql2@3.24.3(@types/node@22.20.1))(react@19.2.8)
+      multer:
+        specifier: 2.0.2
+        version: 2.0.2
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2
