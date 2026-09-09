@@ -3,6 +3,11 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { formatMoney } from '@zhs/shared';
+import {
+  CoverPreview,
+  useHasHover,
+  type PreviewTarget,
+} from '@/components/admin/cover-preview';
 import { Button, Eyebrow, HandDrawnRule } from '@/components/primitives';
 
 interface Row {
@@ -15,6 +20,7 @@ interface Row {
   accentHex: string | null;
   amazonUrl: string | null;
   inventory?: { quantity: number } | null;
+  images?: Array<{ url: string; alt: string }>;
 }
 
 const STATUS_TONE: Record<string, string> = {
@@ -29,6 +35,9 @@ export default function AdminProductsPage() {
   const [rows, setRows] = useState<Row[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
+  const [preview, setPreview] = useState<PreviewTarget | null>(null);
+  const [cursor, setCursor] = useState({ x: 0, y: 0 });
+  const hasHover = useHasHover();
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -64,7 +73,10 @@ export default function AdminProductsPage() {
       {loading ? (
         <p className="mt-8 text-small text-ink-muted">Loading…</p>
       ) : (
-        <div className="mt-8 overflow-x-auto">
+        <div
+          className="mt-8 overflow-x-auto"
+          onScroll={() => setPreview(null)}
+        >
           <table className="w-full min-w-[720px] border-collapse text-small">
             <thead>
               <tr className="border-b border-ink text-left">
@@ -78,7 +90,21 @@ export default function AdminProductsPage() {
             </thead>
             <tbody>
               {rows.map((row) => (
-                <tr key={row.id} className="border-b border-rule">
+                <tr
+                  key={row.id}
+                  className="border-b border-rule transition-colors duration-fast hover:bg-paper"
+                  onMouseEnter={(event) => {
+                    if (!hasHover) return;
+                    const cover = row.images?.[0];
+                    if (!cover) return;
+                    setPreview({ url: cover.url, alt: cover.alt, title: row.title });
+                    setCursor({ x: event.clientX, y: event.clientY });
+                  }}
+                  onMouseMove={(event) => {
+                    if (preview) setCursor({ x: event.clientX, y: event.clientY });
+                  }}
+                  onMouseLeave={() => setPreview(null)}
+                >
                   <td className="py-3 pr-4">
                     <Link href={`/admin/products/${row.id}`} className="link-underline">
                       <span className="inline-flex items-center gap-2">
@@ -119,6 +145,8 @@ export default function AdminProductsPage() {
           </table>
         </div>
       )}
+
+      <CoverPreview target={preview} x={cursor.x} y={cursor.y} />
     </div>
   );
 }
