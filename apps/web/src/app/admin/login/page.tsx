@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
+import { PasswordInput } from '@/components/password-input';
 import { Button, Eyebrow, HandDrawnRule } from '@/components/primitives';
 
 const FIELD =
@@ -59,8 +60,9 @@ function LoginForm() {
         <label htmlFor="password" className="eyebrow block">
           Password
         </label>
-        <input id="password" name="password" type="password" required
-          autoComplete="current-password" className={`mt-2 ${FIELD}`} />
+        <div className="mt-2">
+          <PasswordInput id="password" name="password" className={FIELD} />
+        </div>
       </div>
 
       {error ? (

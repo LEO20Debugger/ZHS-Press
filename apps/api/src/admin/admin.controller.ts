@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -11,8 +12,12 @@ import {
   Put,
   Query,
   Req,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
 import { and, desc, eq } from 'drizzle-orm';
 import { Inject } from '@nestjs/common';
 import { schema, type Database } from '@zhs/db';
@@ -28,6 +33,7 @@ import { AdminGuard, Roles, type AuthenticatedRequest } from '../auth/admin.guar
 import { AdminProductsService } from './admin-products.service';
 import { AuditService } from './audit.service';
 import { ParityService } from './parity.service';
+import { StorageService } from '../storage/storage.service';
 
 /**
  * Admin API.
@@ -45,6 +51,7 @@ export class AdminController {
     private readonly products: AdminProductsService,
     private readonly parity: ParityService,
     private readonly audit: AuditService,
+    private readonly storage: StorageService,
   ) {}
 
   /* ---- Catalogue: editors and admins ---------------------------------- */
@@ -96,6 +103,45 @@ export class AdminController {
     @Req() request: AuthenticatedRequest,
   ) {
     return this.products.addImage(id, body, request.admin!);
+  }
+
+  /**
+   * Real file upload.
+   *
+   * memoryStorage, not disk: the file is validated and re-encoded before
+   * anything is written, so an unverified upload never lands on the
+   * filesystem at all. The limit here is a first gate — StorageService
+   * enforces its own, because a limit only in the interceptor can be
+   * bypassed by any other caller of the service.
+   */
+  @Post('products/:id/images/upload')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: { fileSize: 12 * 1024 * 1024, files: 1 },
+    }),
+  )
+  async uploadImage(
+    @Param('id', ParseIntPipe) id: number,
+    @UploadedFile() file: Express.Multer.File | undefined,
+    @Body('alt') alt: string | undefined,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    if (!file) throw new BadRequestException('No file was uploaded.');
+    if (!alt?.trim()) {
+      throw new BadRequestException({
+        message: 'Alt text is required.',
+        errors: [{ field: 'alt', message: 'Describe the image for screen readers.' }],
+      });
+    }
+
+    const stored = await this.storage.storeImage(file);
+
+    return this.products.addImage(
+      id,
+      { url: stored.url, alt: alt.trim(), width: stored.width, height: stored.height },
+      request.admin!,
+    );
   }
 
   @Delete('products/:id/images/:imageId')

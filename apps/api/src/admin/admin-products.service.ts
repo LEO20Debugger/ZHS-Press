@@ -228,7 +228,7 @@ export class AdminProductsService {
    */
   async addImage(
     productId: number,
-    input: { url: string; alt: string; position?: number },
+    input: { url: string; alt: string; position?: number; width?: number; height?: number },
     actor: AdminPrincipal,
   ) {
     await this.findOne(productId);
@@ -243,6 +243,8 @@ export class AdminProductsService {
       // Never nullable: an image with no alt text is invisible to a screen
       // reader, and enforcing it here is why the storefront can rely on it.
       alt: input.alt,
+      width: input.width ?? null,
+      height: input.height ?? null,
       position: input.position ?? existing.length,
     });
 

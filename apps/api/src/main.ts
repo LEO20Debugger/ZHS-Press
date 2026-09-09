@@ -2,12 +2,13 @@ import 'reflect-metadata';
 import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 import { resolvePort, type Env } from './config/env';
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create(AppModule, {
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     // Kept for any future provider that signs an HMAC over the exact bytes.
     // Flutterwave does not: its verif-hash is a static shared secret echoed
     // back verbatim, so it needs no raw body — which is precisely why every
@@ -18,6 +19,20 @@ async function bootstrap(): Promise<void> {
   const config = app.get(ConfigService<Env, true>);
 
   app.setGlobalPrefix('api');
+
+  /*
+   * Uploaded artwork, served outside the /api prefix so the URLs stay clean.
+   * Cached hard: filenames are randomly generated and a stored image is never
+   * edited in place, so a URL always points at the same bytes.
+   */
+  app.useStaticAssets(config.get('UPLOAD_DIR', { infer: true }), {
+    prefix: '/uploads/',
+    immutable: true,
+    maxAge: '365d',
+    index: false,
+    // Never let a stored file decide it is HTML or a script.
+    setHeaders: (res) => res.setHeader('X-Content-Type-Options', 'nosniff'),
+  });
   app.use(cookieParser());
 
   app.enableCors({

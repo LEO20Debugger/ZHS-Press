@@ -45,6 +45,22 @@ const envSchema = z.object({
 
   WEB_BASE_URL: z.string().url().default('http://localhost:3000'),
 
+  /**
+   * Where uploaded product images are written.
+   *
+   * On Railway this must point inside a mounted volume, or every deploy wipes
+   * the catalogue's artwork — a container filesystem does not survive a
+   * restart. The default suits local development only.
+   */
+  UPLOAD_DIR: z.string().default('./uploads'),
+
+  /**
+   * Public base URL those files are served from. Defaults to this API's own
+   * /uploads route; point it at a CDN or bucket when one exists, and nothing
+   * else has to change.
+   */
+  ASSET_BASE_URL: z.string().default('http://localhost:4000/uploads'),
+
   // Payment configuration is optional at boot so the catalogue can be built and
   // reviewed before the Flutterwave account is confirmed. CheckoutService
   // asserts these are present the moment it is actually used — see

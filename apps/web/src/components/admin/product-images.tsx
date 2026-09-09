@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useRef, useState, type DragEvent, type FormEvent } from 'react';
 import { deriveTint, validateAccent } from '@zhs/ui';
 import { Button } from '../primitives';
 
@@ -93,6 +93,73 @@ export function ProductImages({
   const [alt, setAlt] = useState('');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [dragging, setDragging] = useState(false);
+  const fileInput = useRef<HTMLInputElement>(null);
+
+  /**
+   * Uploads the chosen file.
+   *
+   * Alt text is collected before the upload rather than after, so an image can
+   * never be stored without it. The API rejects a missing alt too — this is
+   * only to save a round trip.
+   */
+  async function upload(file: File) {
+    if (!alt.trim()) {
+      setMessage('Add alt text first — describe the image for screen readers.');
+      return;
+    }
+
+    setBusy(true);
+    setMessage(null);
+
+    try {
+      const body = new FormData();
+      body.append('file', file);
+      body.append('alt', alt.trim());
+
+      const response = await fetch(`/api/admin/admin/products/${productId}/images/upload`, {
+        method: 'POST',
+        body,
+      });
+
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) {
+        setMessage(payload?.errors?.[0]?.message ?? payload?.message ?? 'Upload failed.');
+        return;
+      }
+
+      onChanged(payload.images ?? []);
+      setAlt('');
+      setPendingFile(null);
+      if (fileInput.current) fileInput.current.value = '';
+
+      // Sample straight from the local file, before it has been fetched back
+      // over the network — it is already in memory here.
+      const objectUrl = URL.createObjectURL(file);
+      try {
+        const hex = await sampleAccent(objectUrl);
+        if (hex) {
+          const validation = validateAccent(hex);
+          if (validation.valid) {
+            onAccentSampled(hex);
+            setMessage(
+              `Uploaded. Accent set to ${hex} from the artwork — pairs with ` +
+                `${validation.foreground} at ${validation.ratio.toFixed(2)}:1.`,
+            );
+            return;
+          }
+        }
+        setMessage('Uploaded. Could not read a usable accent colour from it.');
+      } finally {
+        URL.revokeObjectURL(objectUrl);
+      }
+    } catch {
+      setMessage('Could not reach the server.');
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function addImage(event: FormEvent) {
     event.preventDefault();
@@ -124,10 +191,9 @@ export function ProductImages({
   }
 
   async function remove(imageId: number) {
-    const response = await fetch(
-      `/api/admin/admin/products/${productId}/images/${imageId}`,
-      { method: 'DELETE' },
-    );
+    const response = await fetch(`/api/admin/admin/products/${productId}/images/${imageId}`, {
+      method: 'DELETE',
+    });
     if (response.ok) {
       const payload = await response.json().catch(() => null);
       onChanged(payload?.images ?? []);
@@ -173,11 +239,7 @@ export function ProductImages({
           {images.map((image, index) => (
             <li key={image.id} className="flex items-center gap-4 border border-rule p-3">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={image.url}
-                alt={image.alt}
-                className="h-16 w-12 shrink-0 object-cover"
-              />
+              <img src={image.url} alt={image.alt} className="h-16 w-12 shrink-0 object-cover" />
               <div className="min-w-0 flex-1">
                 <p className="truncate font-ui text-small">{image.url}</p>
                 <p className="truncate text-caption text-ink-muted">{image.alt}</p>
@@ -208,10 +270,85 @@ export function ProductImages({
         </p>
       )}
 
-      <form onSubmit={addImage} className="mt-5 grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
-        <div>
+      {/* Alt text first: it applies to whichever route adds the image. */}
+      <div className="mt-6">
+        <label htmlFor="image-alt" className="eyebrow block">
+          Alt text
+        </label>
+        <p className="mt-0.5 text-caption text-ink-muted">
+          Required. Describe the artwork for someone who cannot see it.
+        </p>
+        <input
+          id="image-alt"
+          value={alt}
+          onChange={(event) => setAlt(event.target.value)}
+          placeholder="Abstract terracotta arcs rising off the top edge"
+          className={`mt-2 ${FIELD}`}
+        />
+      </div>
+
+      {/*
+        Dropzone. A real <input type="file"> underneath, visually hidden but
+        focusable and labelled, so the whole thing works from the keyboard —
+        a div with drag handlers alone is unusable without a mouse.
+      */}
+      <div
+        onDragOver={(event: DragEvent) => {
+          event.preventDefault();
+          setDragging(true);
+        }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={(event: DragEvent) => {
+          event.preventDefault();
+          setDragging(false);
+          const file = event.dataTransfer?.files?.[0];
+          if (file) {
+            setPendingFile(file);
+            void upload(file);
+          }
+        }}
+        className={`mt-4 border-2 border-dashed p-6 text-center transition-colors duration-base ${
+          dragging ? 'border-ink bg-accent-tint' : 'border-rule'
+        }`}
+      >
+        <input
+          ref={fileInput}
+          id="image-file"
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/avif"
+          className="sr-only"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            if (file) {
+              setPendingFile(file);
+              void upload(file);
+            }
+          }}
+        />
+        <label
+          htmlFor="image-file"
+          className="cursor-pointer font-ui text-small underline decoration-rule underline-offset-4 hover:decoration-ink"
+        >
+          Choose an image
+        </label>
+        <p className="mt-1 text-caption text-ink-muted">
+          or drag one here · JPEG, PNG, WebP or AVIF · up to 12MB
+        </p>
+        {busy && pendingFile ? (
+          <p role="status" className="mt-2 text-caption">
+            Uploading {pendingFile.name}…
+          </p>
+        ) : null}
+      </div>
+
+      {/* Kept for artwork already sitting in the web app's public directory. */}
+      <details className="mt-4">
+        <summary className="cursor-pointer text-caption text-ink-muted">
+          Or reference an image by path
+        </summary>
+        <form onSubmit={addImage} className="mt-3 flex gap-3">
           <label htmlFor="image-url" className="sr-only">
-            Image URL
+            Image path or URL
           </label>
           <input
             id="image-url"
@@ -220,34 +357,22 @@ export function ProductImages({
             placeholder="/covers/soar.jpg"
             className={FIELD}
           />
-        </div>
-        <div>
-          <label htmlFor="image-alt" className="sr-only">
-            Alt text
-          </label>
-          <input
-            id="image-alt"
-            value={alt}
-            onChange={(event) => setAlt(event.target.value)}
-            placeholder="Describe it for screen readers"
-            className={FIELD}
-          />
-        </div>
-        <Button type="submit" disabled={busy || !url || !alt} variant="outline">
-          {busy ? 'Adding…' : 'Add'}
-        </Button>
-      </form>
+          <Button type="submit" disabled={busy || !url || !alt} variant="outline">
+            Add
+          </Button>
+        </form>
+      </details>
 
+      {/*
+        One status line for both routes. role="status" so a screen reader is
+        told the upload finished and what accent was derived, rather than the
+        result being visible only to someone watching the panel.
+      */}
       {message ? (
-        <p role="status" className="mt-3 text-caption text-ink-muted">
+        <p role="status" className="mt-4 text-caption text-ink-muted">
           {message}
         </p>
       ) : null}
-
-      <p className="mt-4 text-caption text-ink-muted">
-        Binary upload is not wired up yet — it needs object storage to be provisioned. Until
-        then, drop files into <code>apps/web/public/covers</code> and reference them by path.
-      </p>
     </div>
   );
 }

@@ -118,7 +118,11 @@
   }
 
   /*
-   * Sticker badge — sits slightly off-axis, like it was applied by hand.
+   * Status badge.
+   *
+   * Sits square rather than rotated. The off-axis "hand-applied sticker" angle
+   * read as a gimmick next to the artwork, and a rotated element's bounding box
+   * is taller than its line box, which made it clip the cover it sat beside.
    *
    * The ring is what makes it readable over artwork. Measured across the nine
    * covers, an ink fill averages 4.5:1 against the art behind the badge but
@@ -132,7 +136,6 @@
    */
   .sticker {
     display: inline-block;
-    transform: rotate(-3deg);
     box-shadow: 0 0 0 2px var(--sticker-ring, var(--paper-raised));
     font-family: var(--font-ui);
     font-size: var(--text-caption);
@@ -281,11 +284,11 @@
   @keyframes settle {
     from {
       opacity: 0;
-      transform: rotate(4deg) scale(0.9);
+      transform: scale(0.92);
     }
     to {
       opacity: 1;
-      transform: rotate(-3deg) scale(1);
+      transform: none;
     }
   }
 
@@ -347,10 +350,6 @@
     transform: none !important;
   }
 
-  .js .sticker-settle {
-    transform: rotate(-3deg) !important;
-  }
-
   .js .rule-draw path,
   .js [data-revealed] .rule-draw path,
   .js .rise .rule-draw path {
@@ -392,5 +391,65 @@
 @media (prefers-reduced-motion: reduce) {
   .js .cart-pulse {
     animation: none !important;
+  }
+}
+
+@layer components {
+  /*
+   * Grid cover mount.
+   *
+   * The cover sits inset on its own accent tint rather than bleeding to the
+   * card edge. Three reasons, in order of how much they matter:
+   *
+   * 1. The per-title accent becomes visible. Filling the frame hid the tint
+   *    entirely behind the artwork, so the colour sampled from each cover was
+   *    doing nothing on the grid — the one place shoppers see every title.
+   * 2. Status badges sit on flat colour instead of arbitrary imagery: 12.3:1
+   *    at worst against the tints, against 4.5:1 over artwork, and predictable
+   *    rather than dependent on what the art happens to look like.
+   * 3. A book reads as an object with edges, not a full-bleed graphic.
+   *
+   * object-contain, not cover: a cover is a fixed composition and cropping it
+   * to fit a frame would cut the artwork someone was paid to make.
+   */
+  .cover-mount {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    aspect-ratio: 4 / 5;
+    /*
+     * Percentage padding resolves against width on every side, so 14% of the
+     * card width is also the vertical margin — enough for the status badge to
+     * sit clear of the artwork rather than clipping its corner.
+     */
+    padding: 14%;
+    overflow: hidden;
+  }
+
+  .cover-mount img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    /*
+     * Ink-toned, not grey. The palette has no neutral grey, and a default
+     * black shadow would introduce one — this is the same hue as --ink at low
+     * alpha, so it reads as depth rather than as a foreign colour.
+     */
+    box-shadow:
+      0 1px 2px rgba(30, 37, 37, 0.1),
+      0 8px 22px -8px rgba(30, 37, 37, 0.3);
+    transition: transform var(--duration-slow) var(--ease-out);
+  }
+
+  /* The cover lifts off its mount, as if picked up. */
+  .group:hover .cover-mount img {
+    transform: translateY(-6px) scale(1.02);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .group:hover .cover-mount img {
+    transform: none !important;
   }
 }

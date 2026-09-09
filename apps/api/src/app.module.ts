@@ -9,6 +9,7 @@ import { CheckoutModule } from './checkout/checkout.module';
 import { DbModule } from './db/db.module';
 import { HealthController } from './health/health.controller';
 import { ProductsModule } from './products/products.module';
+import { StorageModule } from './storage/storage.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { ProductsModule } from './products/products.module';
     CheckoutModule,
     AuthModule,
     AdminModule,
+    StorageModule,
   ],
   controllers: [HealthController],
 })

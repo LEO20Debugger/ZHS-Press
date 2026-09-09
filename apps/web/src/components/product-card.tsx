@@ -49,7 +49,7 @@ export function ProductCard({ product }: { product: ProductSummary }) {
       style={accentStyle(product.accent)}
       className="group relative flex h-full flex-col"
     >
-      <div className="cover-frame relative aspect-cover bg-accent-tint">
+      <div className="cover-mount bg-accent-tint">
         {product.coverImage ? (
           /*
             sizes tells the browser how wide this will actually render, so it
@@ -59,9 +59,9 @@ export function ProductCard({ product }: { product: ProductSummary }) {
           <Image
             src={product.coverImage.url}
             alt={product.coverImage.alt}
-            fill
+            width={product.coverImage.width ?? 896}
+            height={product.coverImage.height ?? 1200}
             sizes="(min-width: 1024px) 300px, (min-width: 768px) 33vw, 50vw"
-            className="object-cover"
           />
         ) : (
           <div className="flex h-full items-center justify-center font-display text-h3 italic text-ink-muted">
