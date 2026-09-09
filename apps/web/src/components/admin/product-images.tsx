@@ -157,7 +157,18 @@ export function ProductImages({
 
       const payload = await response.json().catch(() => null);
       if (!response.ok) {
-        setMessage(payload?.errors?.[0]?.message ?? payload?.message ?? 'Upload failed.');
+        /*
+         * Falls back to the status code rather than a bare "Upload failed".
+         * A 413 from the platform's request-size limit, a 502 from an
+         * unreachable API and a 500 from the server all arrive here with no
+         * JSON body to quote, and each needs a different fix — a message that
+         * cannot tell them apart sends you looking in the wrong place.
+         */
+        setMessage(
+          payload?.errors?.[0]?.message ??
+            payload?.message ??
+            `Upload failed (HTTP ${response.status}).`,
+        );
         return;
       }
 
