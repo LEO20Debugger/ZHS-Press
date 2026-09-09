@@ -16,7 +16,12 @@ import {
 import { and, desc, eq } from 'drizzle-orm';
 import { Inject } from '@nestjs/common';
 import { schema, type Database } from '@zhs/db';
-import { upsertProductSchema, type UpsertProductInput } from '@zhs/shared';
+import {
+  addProductImageSchema,
+  upsertProductSchema,
+  type AddProductImageInput,
+  type UpsertProductInput,
+} from '@zhs/shared';
 import { DB } from '../db/db.module';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
 import { AdminGuard, Roles, type AuthenticatedRequest } from '../auth/admin.guard';
@@ -80,6 +85,35 @@ export class AdminController {
     @Req() request: AuthenticatedRequest,
   ) {
     return this.products.update(id, body, request.admin!);
+  }
+
+  /* ---- Product images -------------------------------------------------- */
+
+  @Post('products/:id/images')
+  addImage(
+    @Param('id', ParseIntPipe) id: number,
+    @Body(new ZodValidationPipe(addProductImageSchema)) body: AddProductImageInput,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return this.products.addImage(id, body, request.admin!);
+  }
+
+  @Delete('products/:id/images/:imageId')
+  removeImage(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('imageId', ParseIntPipe) imageId: number,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return this.products.removeImage(id, imageId, request.admin!);
+  }
+
+  @Patch('products/:id/images/order')
+  reorderImages(
+    @Param('id', ParseIntPipe) id: number,
+    @Body('imageIds') imageIds: number[],
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return this.products.reorderImages(id, imageIds, request.admin!);
   }
 
   @Patch('products/:id/inventory')

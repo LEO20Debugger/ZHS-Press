@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { hash as argonHash } from '@node-rs/argon2';
 import { eq } from 'drizzle-orm';
 import { closeDb, createDb } from './client';
+import { CATALOGUE } from './catalogue';
 import * as schema from './schema/index';
 
 /**
@@ -77,92 +78,59 @@ async function main(): Promise<void> {
   }
 
   /* ---- Catalogue -------------------------------------------------------- */
-  const catalogue = [
-    {
-      slug: 'soar',
-      type: 'book' as const,
-      status: 'available' as const,
-      title: 'Soar',
-      subtitle: 'A story about finding your own height',
-      blurb:
-        'Two siblings, one impossible hill, and an afternoon that turns into the summer they will tell stories about for years.',
-      priceCents: 1499,
-      accentHex: '#b13f2f',
-      accentTintHex: '#f0e2d8',
-      releaseDate: '2025-06-03',
-      featured: true,
-      book: { authorName: 'Zainab H. Suleiman', format: 'Hardcover', pageCount: 40 },
-      quantity: 40,
-    },
-    {
-      slug: 'turnaspurn',
-      type: 'book' as const,
-      status: 'coming_soon' as const,
-      title: 'TurnaSpurn',
-      subtitle: 'A tale told backwards, then forwards again',
-      blurb:
-        'A word that means nothing until you say it twice. A village that only appears to those willing to walk home the long way.',
-      priceCents: 1699,
-      accentHex: '#5a6b4e',
-      accentTintHex: '#e9e9e2',
-      releaseDate: '2025-09-16',
-      featured: true,
-      book: { authorName: 'Ekene Adeyemi', format: 'Hardcover', pageCount: 56 },
-      quantity: 0,
-    },
-    {
-      slug: 'light-issue-4',
-      type: 'magazine' as const,
-      status: 'available' as const,
-      title: 'Light, Issue Four',
-      subtitle: 'Inheritance',
-      blurb: 'Twenty-two writers and artists on what gets handed down that nobody chose.',
-      priceCents: 1200,
-      accentHex: '#2f4b7c',
-      accentTintHex: '#e2e2e4',
-      releaseDate: '2025-07-01',
-      featured: true,
-      issue: { issueNumber: 4, theme: 'Inheritance' },
-      quantity: 120,
-    },
-    {
-      slug: 'journal-marigold',
-      type: 'stationery' as const,
-      status: 'available' as const,
-      title: 'The Marigold Journal',
-      subtitle: 'Lined, 160 pages',
-      blurb: 'A lay-flat notebook with an artist-designed cover.',
-      priceCents: 2450,
-      accentHex: '#e0a02e',
-      accentTintHex: '#faf1de',
-      featured: false,
-      stationery: { dimensions: '148 x 210 mm (A5)', pageCount: 160, coverArtist: 'Ify Okonkwo' },
-      quantity: 60,
-    },
-  ];
-
-  for (const entry of catalogue) {
+  for (const entry of CATALOGUE) {
     const existing = await db.query.products.findFirst({
       where: eq(schema.products.slug, entry.slug),
     });
-    if (existing) continue;
+    if (existing) {
+      // Already seeded. Top up the cover if it is missing, which is the state
+      // an earlier seed left the database in.
+      const image = await db.query.productImages.findFirst({
+        where: eq(schema.productImages.productId, existing.id),
+      });
+      if (!image) {
+        await db.insert(schema.productImages).values({
+          productId: existing.id,
+          url: `/covers/${entry.cover}`,
+          alt: `Cover artwork for ${entry.title}`,
+          width: 896,
+          height: 1200,
+          position: 0,
+        });
+        console.log(`Added missing cover for ${entry.title}`);
+      }
+      continue;
+    }
 
     const [inserted] = await db.insert(schema.products).values({
       slug: entry.slug,
       type: entry.type,
       status: entry.status,
       title: entry.title,
-      subtitle: entry.subtitle,
-      blurb: entry.blurb,
+      subtitle: entry.subtitle ?? null,
+      blurb: entry.blurb ?? null,
+      description: entry.description ?? null,
       priceCents: entry.priceCents,
       currency: 'USD',
       accentHex: entry.accentHex,
       accentTintHex: entry.accentTintHex,
       releaseDate: entry.releaseDate ?? null,
-      featured: entry.featured,
+      amazonUrl: entry.amazonUrl ?? null,
+      featured: entry.featured ?? false,
     });
 
     const id = Number((inserted as unknown as { insertId: number }).insertId);
+
+    // The cover. Without this row the storefront renders an empty tinted
+    // frame — the product exists but has nothing to show.
+    await db.insert(schema.productImages).values({
+      productId: id,
+      url: `/covers/${entry.cover}`,
+      alt: `Cover artwork for ${entry.title}`,
+      width: 896,
+      height: 1200,
+      position: 0,
+    });
 
     if (entry.book) await db.insert(schema.bookDetails).values({ productId: id, ...entry.book });
     if (entry.issue)
@@ -171,7 +139,7 @@ async function main(): Promise<void> {
       await db.insert(schema.stationeryDetails).values({ productId: id, ...entry.stationery });
 
     await db.insert(schema.inventory).values({ productId: id, quantity: entry.quantity });
-    console.log(`Seeded product: ${entry.title}`);
+    console.log(`Seeded ${entry.title}`);
   }
 
   await closeDb();

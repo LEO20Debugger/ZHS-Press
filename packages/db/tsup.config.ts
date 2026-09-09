@@ -8,5 +8,8 @@ export default defineConfig({
   dts: true,
   clean: true,
   sourcemap: true,
-  external: ['zod', 'drizzle-orm', 'mysql2'],
+  // @node-rs/argon2 loads a platform-specific .node binary through a dynamic
+  // require. Bundling it makes esbuild try to resolve every platform's binary
+  // at build time and fail on all of them; it must stay a runtime import.
+  external: ['zod', 'drizzle-orm', 'mysql2', '@node-rs/argon2'],
 });

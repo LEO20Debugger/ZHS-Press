@@ -164,3 +164,26 @@ export const upsertProductSchema = z
     path: ['releaseDate'],
   });
 export type UpsertProductInput = z.infer<typeof upsertProductSchema>;
+
+/**
+ * Attaching a product image.
+ *
+ * `url` accepts a site-relative path (the covers served from the web app's
+ * public directory) or an absolute URL (a CDN, once one exists). `alt` is
+ * required rather than optional — an image with no alt text is invisible to a
+ * screen reader, and the storefront relies on it always being present.
+ */
+export const addProductImageSchema = z.object({
+  url: z
+    .string()
+    .trim()
+    .min(1)
+    .max(512)
+    .refine(
+      (value) => value.startsWith('/') || /^https?:\/\//.test(value),
+      'Must be a site-relative path like /covers/soar.jpg, or an http(s) URL',
+    ),
+  alt: z.string().trim().min(1, 'Describe the image for screen readers').max(320),
+  position: z.number().int().min(0).optional(),
+});
+export type AddProductImageInput = z.infer<typeof addProductImageSchema>;

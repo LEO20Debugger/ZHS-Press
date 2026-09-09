@@ -218,6 +218,78 @@ export class AdminProductsService {
     return { ok: true };
   }
 
+  /* ---- Images ---------------------------------------------------------
+   * Attaching by URL rather than accepting a binary upload. Object storage is
+   * not provisioned yet, and inventing a storage location — a container disk
+   * that vanishes on redeploy, say — would be worse than being explicit about
+   * the gap. This works today for the covers served from the web app's public
+   * directory, and for any CDN URL later, with no change needed when real
+   * uploads land.
+   */
+  async addImage(
+    productId: number,
+    input: { url: string; alt: string; position?: number },
+    actor: AdminPrincipal,
+  ) {
+    await this.findOne(productId);
+
+    const existing = await this.db.query.productImages.findMany({
+      where: eq(schema.productImages.productId, productId),
+    });
+
+    await this.db.insert(schema.productImages).values({
+      productId,
+      url: input.url,
+      // Never nullable: an image with no alt text is invisible to a screen
+      // reader, and enforcing it here is why the storefront can rely on it.
+      alt: input.alt,
+      position: input.position ?? existing.length,
+    });
+
+    await this.audit.record(actor, 'product.image.add', 'product', String(productId), {
+      url: { from: null, to: input.url },
+    });
+
+    return this.findOne(productId);
+  }
+
+  async removeImage(productId: number, imageId: number, actor: AdminPrincipal) {
+    await this.db
+      .delete(schema.productImages)
+      .where(
+        and(
+          eq(schema.productImages.id, imageId),
+          eq(schema.productImages.productId, productId),
+        ),
+      );
+
+    await this.audit.record(actor, 'product.image.remove', 'product', String(productId), {
+      imageId: { from: imageId, to: null },
+    });
+
+    return this.findOne(productId);
+  }
+
+  /** Position 0 is the cover; everything else is a gallery shot. */
+  async reorderImages(productId: number, orderedIds: number[], actor: AdminPrincipal) {
+    await this.findOne(productId);
+
+    for (const [index, imageId] of orderedIds.entries()) {
+      await this.db
+        .update(schema.productImages)
+        .set({ position: index })
+        .where(
+          and(
+            eq(schema.productImages.id, imageId),
+            eq(schema.productImages.productId, productId),
+          ),
+        );
+    }
+
+    await this.audit.record(actor, 'product.image.reorder', 'product', String(productId));
+    return this.findOne(productId);
+  }
+
   async setInventory(id: number, quantity: number, actor: AdminPrincipal) {
     await this.findOne(id);
     await this.db

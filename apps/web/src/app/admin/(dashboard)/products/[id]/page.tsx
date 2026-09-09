@@ -4,6 +4,7 @@ import { use, useEffect, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { formatMoney, parseMoneyToCents, upsertProductSchema } from '@zhs/shared';
 import { AccentPicker } from '@/components/admin/accent-picker';
+import { ProductImages } from '@/components/admin/product-images';
 import { Button, Eyebrow, HandDrawnRule } from '@/components/primitives';
 
 const FIELD =
@@ -81,6 +82,7 @@ export default function ProductEditPage({ params }: { params: Promise<{ id: stri
   const [message, setMessage] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(!isNew);
+  const [images, setImages] = useState<Array<{ id: number; url: string; alt: string; position: number }>>([]);
 
   useEffect(() => {
     if (isNew) return;
@@ -89,6 +91,7 @@ export default function ProductEditPage({ params }: { params: Promise<{ id: stri
       .then((r) => (r.ok ? r.json() : null))
       .then((p) => {
         if (!p) return;
+        setImages(p.images ?? []);
         setForm({
           slug: p.slug ?? '',
           type: p.type ?? 'book',
@@ -265,6 +268,23 @@ export default function ProductEditPage({ params }: { params: Promise<{ id: stri
           <textarea id="description" rows={7} value={form.description}
             onChange={(e) => set('description', e.target.value)} className={FIELD} />
         </Field>
+
+        {/*
+          Images come before the accent picker on purpose: the accent is meant
+          to be sampled from the cover, so the cover has to be attached first.
+        */}
+        {!isNew ? (
+          <ProductImages
+            productId={Number(id)}
+            images={images}
+            onAccentSampled={(hex) => set('accentHex', hex)}
+            onChanged={setImages}
+          />
+        ) : (
+          <p className="border-t border-rule pt-6 text-small text-ink-muted">
+            Save the product first, then add its cover.
+          </p>
+        )}
 
         <div className="border-t border-rule pt-6">
           <AccentPicker value={form.accentHex} onChange={(hex) => set('accentHex', hex)} />
