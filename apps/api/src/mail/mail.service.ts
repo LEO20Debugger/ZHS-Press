@@ -163,7 +163,27 @@ export class MailService {
         return;
       }
 
-      this.logger.log(`Mail transport ready (Resend API), sending as ${this.from}`);
+      this.logger.log(
+        `Mail transport ready (Resend API), sending as ${this.from}` +
+          (result.restricted ? ' [send-only key]' : ''),
+      );
+
+      /*
+       * A send-only key cannot list domains, so the From domain cannot be
+       * checked here. Say so rather than staying quiet: silence would read as
+       * "the domain is fine", and the 403 that follows on every send is the
+       * single most likely thing to go wrong with this configuration.
+       */
+      if (result.restricted) {
+        const domain = addressDomain(this.from);
+        if (domain && domain !== 'resend.dev') {
+          this.logger.warn(
+            `Cannot confirm "${domain}" is verified at Resend — this key can send ` +
+              'but not read. If sends fail with "domain is not verified", either ' +
+              'verify it at resend.com/domains or use onboarding@resend.dev.',
+          );
+        }
+      }
 
       /*
        * Warn when the From domain is not among the verified ones.

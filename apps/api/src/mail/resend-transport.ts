@@ -111,15 +111,25 @@ export class ResendTransport {
    * status codes do not mean what you would guess, and this was verified
    * against the live API rather than assumed:
    *
-   * - An **invalid key returns 400**, not 401, with
-   *   `{"message":"API key is invalid"}`. Keying off the status alone lets a
-   *   revoked key sail through boot and fail on every send afterwards.
-   * - A **403** is a restricted, send-only key. That is a legitimate setup —
-   *   it cannot list domains but it can do the only thing this service needs.
+   * - An **invalid key returns 400**, not 401:
+   *   `{"message":"API key is invalid"}`.
+   * - A **send-only key returns 401**:
+   *   `{"message":"This API key is restricted to only send emails"}` — and that
+   *   is a perfectly good key. It is the *recommended* kind, since a key that
+   *   can only send is the least damaging one to leak.
    *
-   * So the message is what decides, not the code.
+   * So 400 is fatal and 401 is fine, which is the exact opposite of what the
+   * status codes suggest. The message decides; the code is noise. Both strings
+   * above were captured from the live API, the second from a real deployment
+   * where an earlier version of this method reported a working key as broken.
    */
-  async verify(): Promise<{ ok: boolean; error?: string; domains?: string[] }> {
+  async verify(): Promise<{
+    ok: boolean;
+    error?: string;
+    domains?: string[];
+    /** Key can send but not read, so the From domain cannot be pre-checked. */
+    restricted?: boolean;
+  }> {
     try {
       const response = await fetch('https://api.resend.com/domains', {
         headers: { authorization: `Bearer ${this.apiKey}` },
@@ -134,13 +144,19 @@ export class ResendTransport {
       if (!response.ok) {
         const message = payload?.message ?? `HTTP ${response.status}`;
 
-        if (response.status === 401 || /api key/i.test(message)) {
+        // A send-only key. It cannot list domains and does not need to — it can
+        // do the one thing this service asks of it.
+        if (/restricted/i.test(message)) {
+          return { ok: true, restricted: true };
+        }
+
+        if (/invalid|not found|unauthor/i.test(message)) {
           return { ok: false, error: `${message} (HTTP ${response.status})` };
         }
 
-        // Restricted key, or a transient provider fault. Neither should stop
-        // the API booting — sending is what proves the key, and it will report
-        // its own failure clearly if there is one.
+        // Anything else is a provider hiccup, and must not stop the API
+        // booting. Sending is what really proves the key, and it reports its
+        // own failure clearly.
         return { ok: true };
       }
 

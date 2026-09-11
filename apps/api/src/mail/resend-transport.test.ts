@@ -201,8 +201,30 @@ describe('ResendTransport.verify', () => {
     expect(result.error).toContain('API key is invalid');
   });
 
-  it('still rejects a 401, whatever the body says', async () => {
-    mockFetch({ status: 401, body: {} });
+  it('accepts a send-only key, which the live API reports as 401', async () => {
+    /*
+     * Captured from a real deployment. A send-only key is the *recommended*
+     * kind — a key that can only send is the least damaging one to leak — and
+     * an earlier version rejected it because the status is 401, reporting a
+     * perfectly working key as broken in the deploy log.
+     *
+     * So 400 is fatal and 401 is fine here, the opposite of what the status
+     * codes suggest. Only the message can tell them apart.
+     */
+    mockFetch({
+      status: 401,
+      body: { message: 'This API key is restricted to only send emails' },
+    });
+
+    const result = await new ResendTransport('re_sendonly').verify();
+    expect(result.ok).toBe(true);
+    expect(result.restricted).toBe(true);
+    // Nothing was listed, so nothing can be claimed about the From domain.
+    expect(result.domains).toBeUndefined();
+  });
+
+  it('still rejects a 401 that says the key is unauthorised', async () => {
+    mockFetch({ status: 401, body: { message: 'Unauthorized' } });
     expect((await new ResendTransport('re_bad').verify()).ok).toBe(false);
   });
 
