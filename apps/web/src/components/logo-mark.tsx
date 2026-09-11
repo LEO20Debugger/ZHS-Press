@@ -2,13 +2,13 @@
 // Re-run: pnpm brand:svg
 
 /**
- * The ZHS mark, inlined so it inherits `currentColor`.
+ * ZHS Press, inlined so it inherits `currentColor`.
  *
  * Referencing the same artwork through <img src="/brand/logo-mark.svg">
- * would render it black regardless of surrounding styles: an SVG loaded
- * that way is an isolated document and cannot see the page's colour.
- * Inlined, it takes the text colour of whatever it sits in, so one
- * component serves both the light and dark grounds.
+ * would render it at a fixed colour regardless of surrounding styles:
+ * an SVG loaded that way is an isolated document and cannot see the
+ * page's colour. Inlined, it takes the text colour of whatever it sits
+ * in, so one component serves both light and dark grounds.
  */
 export function LogoMark({ className }: { className?: string }) {
   return (
