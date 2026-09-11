@@ -28,9 +28,28 @@ alternative is under the "plain text" toggle.
 
 The directory is git-ignored; regenerate it whenever a template changes.
 
+## Railway blocks SMTP — use the HTTPS API there
+
+Railway blocks outbound SMTP on ports 25, 465, 587 and 2525 for every plan below
+Pro, to keep their address space off spam blocklists. It blocks rather than
+refuses, so a perfectly correct `SMTP_URL` stalls for the full socket timeout and
+reports `Connection timeout`, which reads like a wrong hostname.
+
+So in production, set **`RESEND_API_KEY`** and leave `SMTP_URL` unset:
+
+```
+RESEND_API_KEY="re_your_key"
+MAIL_FROM="ZHS Press <onboarding@resend.dev>"
+```
+
+`MailService` prefers the HTTPS transport whenever that key is present and falls
+back to SMTP otherwise. HTTPS on 443 is not blocked anywhere, so this is the only
+transport that works on the host the API actually runs on. `SMTP_URL` stays
+supported for local development and for a future move to a host that permits it.
+
 ## Configuring a sender
 
-One variable:
+For local development, or on a host that allows SMTP. One variable:
 
 ```
 SMTP_URL="smtps://user:password@smtp.provider.com:465"

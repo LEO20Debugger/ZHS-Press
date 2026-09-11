@@ -58,11 +58,11 @@ if (!recipient || !recipient.includes('@')) {
   die('Usage: pnpm mail:send-test <your@email.com> [template]');
 }
 
-if (!process.env.SMTP_URL) {
+if (!process.env.RESEND_API_KEY && !process.env.SMTP_URL) {
   die(
-    'SMTP_URL is not set in .env — there is nothing to send through.\n' +
+    'Neither RESEND_API_KEY nor SMTP_URL is set in .env — nothing to send through.\n' +
       '  See docs/email.md. For Resend:\n' +
-      '    SMTP_URL="smtp://resend:re_YOUR_KEY@smtp.resend.com:587"',
+      '    RESEND_API_KEY="re_YOUR_KEY"',
   );
 }
 
@@ -148,17 +148,26 @@ const chosen = only ? [only] : Object.keys(TEMPLATES);
 /* ---- Send --------------------------------------------------------------- */
 
 const config = {
+  RESEND_API_KEY: process.env.RESEND_API_KEY,
   SMTP_URL: process.env.SMTP_URL,
   MAIL_FROM: process.env.MAIL_FROM ?? 'ZHS Press <onboarding@resend.dev>',
   MAIL_REPLY_TO: process.env.MAIL_REPLY_TO,
   NODE_ENV: 'development',
 };
 
-const parsed = parseSmtpUrl(config.SMTP_URL);
-console.log(`\n  Host    ${parsed.host}:${parsed.port}  (${parsed.secure ? 'implicit TLS' : 'STARTTLS'})`);
-console.log(`  User    ${parsed.auth?.user ?? '(none)'}`);
-console.log(`  From    ${config.MAIL_FROM}`);
-console.log(`  To      ${recipient}\n`);
+// Printed before anything is sent, because "which transport am I even using"
+// is the first question when mail does not arrive.
+if (config.RESEND_API_KEY) {
+  console.log('\n  Transport  Resend HTTPS API (api.resend.com)');
+} else {
+  const parsed = parseSmtpUrl(config.SMTP_URL);
+  const tls = parsed.secure ? 'implicit TLS' : 'STARTTLS';
+  console.log(`\n  Transport  SMTP ${parsed.host}:${parsed.port} (${tls})`);
+  console.log('             Railway blocks SMTP below Pro — use RESEND_API_KEY there.');
+}
+
+console.log(`  From       ${config.MAIL_FROM}`);
+console.log(`  To         ${recipient}\n`);
 
 const mail = new MailService({ get: (key) => config[key] });
 
@@ -180,8 +189,12 @@ await mail.onApplicationShutdown();
 console.log(`\n  ${sent} sent, ${failed} failed.\n`);
 
 if (failed > 0) {
-  console.log('  If the failure mentions authentication, check the API key.');
-  console.log('  If it timed out, try port 2587 — see docs/email.md.\n');
+  console.log('  "domain is not verified"  -> set MAIL_FROM to onboarding@resend.dev,');
+  console.log('                               or verify the domain at resend.com/domains.');
+  console.log('  "your own email address"  -> unverified accounts can only send to the');
+  console.log('                               address the Resend account was created with.');
+  console.log('  "API key is invalid"      -> check RESEND_API_KEY.');
+  console.log('  timed out                 -> SMTP is blocked; use RESEND_API_KEY.\n');
   process.exit(1);
 }
 

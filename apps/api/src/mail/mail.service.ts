@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createTransport, type Transporter } from 'nodemailer';
+import { ResendTransport, addressDomain } from './resend-transport';
 import type { Env } from '../config/env';
 import type { Mail } from './templates';
 
@@ -59,7 +60,7 @@ export function parseSmtpUrl(raw: string): SmtpConnection {
 export interface SendResult {
   sent: boolean;
   /** Why not, when `sent` is false. Returned rather than thrown — see `send`. */
-  reason?: 'not_configured' | 'transport_error';
+  reason?: 'not_configured' | 'transport_error' | 'rejected';
 }
 
 /**
@@ -88,11 +89,30 @@ export interface SendResult {
 export class MailService {
   private readonly logger = new Logger(MailService.name);
   private transporter: Transporter | null = null;
+  private resend: ResendTransport | null = null;
 
   constructor(private readonly config: ConfigService<Env, true>) {}
 
   get configured(): boolean {
-    return Boolean(this.config.get('SMTP_URL', { infer: true }));
+    return Boolean(
+      this.config.get('RESEND_API_KEY', { infer: true }) ??
+        this.config.get('SMTP_URL', { infer: true }),
+    );
+  }
+
+  /**
+   * The HTTPS transport, when a Resend key is set. Preferred over SMTP.
+   *
+   * Railway blocks outbound SMTP on every plan below Pro — 25, 465, 587 and
+   * 2525 — so on the host this API actually runs on, SMTP cannot work at all.
+   * It times out rather than refusing, which is why the symptom is a ten-second
+   * stall and a "Connection timeout" that looks like a bad hostname.
+   */
+  private httpTransport(): ResendTransport | null {
+    const apiKey = this.config.get('RESEND_API_KEY', { infer: true });
+    if (!apiKey) return null;
+    if (!this.resend) this.resend = new ResendTransport(apiKey);
+    return this.resend;
   }
 
   /**
@@ -134,11 +154,46 @@ export class MailService {
   async verifyTransport(): Promise<void> {
     const isProduction = this.config.get('NODE_ENV', { infer: true }) === 'production';
 
+    const http = this.httpTransport();
+    if (http) {
+      const result = await http.verify();
+
+      if (!result.ok) {
+        this.logger.error(`Resend API key failed to verify: ${result.error}`);
+        return;
+      }
+
+      this.logger.log(`Mail transport ready (Resend API), sending as ${this.from}`);
+
+      /*
+       * Warn when the From domain is not among the verified ones.
+       *
+       * This is the failure the old SMTP `verify()` could never catch: the
+       * credentials are perfect, boot looks clean, and then every single send
+       * is refused with "The <domain> domain is not verified" — discovered by a
+       * customer who paid and got no receipt. Checking it at boot turns that
+       * into one line in the deploy log.
+       */
+      const domain = addressDomain(this.from);
+      if (domain && result.domains && !result.domains.includes(domain)) {
+        this.logger.error(
+          `MAIL_FROM uses "${domain}", which is NOT verified at Resend` +
+            (result.domains.length
+              ? ` (verified: ${result.domains.join(', ')}).`
+              : ' (no verified domains on this account).') +
+            ' Every send will be refused with a 403. Either verify the domain at' +
+            ' resend.com/domains, or set MAIL_FROM to "ZHS Press <onboarding@resend.dev>"' +
+            ' — which can only deliver to the account holder\'s own address.',
+        );
+      }
+      return;
+    }
+
     const transport = this.transport();
     if (!transport) {
       const message =
-        'SMTP_URL is not set. Newsletter confirmations, order receipts and ' +
-        'submission alerts will be logged instead of sent.';
+        'Neither RESEND_API_KEY nor SMTP_URL is set. Newsletter confirmations, ' +
+        'order receipts and submission alerts will be logged instead of sent.';
 
       // In production this is not a notice, it is a defect: customers who pay
       // get no receipt and nobody can complete a newsletter opt-in.
@@ -149,11 +204,13 @@ export class MailService {
 
     try {
       await transport.verify();
-      this.logger.log(`Mail transport ready, sending as ${this.from}`);
+      this.logger.log(`Mail transport ready (SMTP), sending as ${this.from}`);
     } catch (error) {
       this.logger.error(
         `Mail transport failed to verify: ${(error as Error).message}. ` +
-          'Check SMTP_URL host, port and credentials.',
+          'Check SMTP_URL host, port and credentials. Note that Railway blocks ' +
+          'outbound SMTP below the Pro plan — set RESEND_API_KEY to send over ' +
+          'HTTPS instead.',
       );
     }
   }
@@ -174,11 +231,27 @@ export class MailService {
    *   no transport at all, where the log *is* the delivery mechanism.
    */
   async send(to: string, mail: Mail, label: string): Promise<SendResult> {
+    const replyToAddress = this.config.get('MAIL_REPLY_TO', { infer: true });
+
+    // HTTPS first — it is the only transport that works on Railway.
+    const http = this.httpTransport();
+    if (http) {
+      const result = await http.send(to, mail, this.from, replyToAddress);
+
+      if (result.ok) {
+        this.logger.log(`Sent ${label} to ${to} (${result.id})`);
+        return { sent: true };
+      }
+
+      this.logger.error(`Failed to send ${label} to ${to}: ${result.error}`);
+      return { sent: false, reason: result.retryable ? 'transport_error' : 'rejected' };
+    }
+
     const transport = this.transport();
 
     if (!transport) {
       this.logger.warn(
-        `[not sent: no SMTP_URL] ${label} -> ${to}\n` +
+        `[not sent: no mail transport] ${label} -> ${to}\n` +
           `  subject: ${mail.subject}\n` +
           mail.text
             .split('\n')
@@ -188,13 +261,11 @@ export class MailService {
       return { sent: false, reason: 'not_configured' };
     }
 
-    const replyTo = this.config.get('MAIL_REPLY_TO', { infer: true });
-
     try {
       const info = await transport.sendMail({
         from: this.from,
         to,
-        ...(replyTo ? { replyTo } : {}),
+        ...(replyToAddress ? { replyTo: replyToAddress } : {}),
         subject: mail.subject,
         text: mail.text,
         html: mail.html,

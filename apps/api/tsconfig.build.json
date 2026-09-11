@@ -1,0 +1,31 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    /*
+     * Off for the production build.
+     *
+     * The build info file lives inside outDir, which nest-cli deletes on every
+     * build (deleteOutDir), so incremental buys nothing here — and a stale one
+     * is actively harmful: it lets a check pass against a cache while the real
+     * compile fails, which is how a broken build reaches a deploy.
+     */
+    "incremental": false
+  },
+  /*
+   * Tests, fixtures and tool configs never belong in dist.
+   *
+   * Without this, `nest build` compiles them alongside the application: dist
+   * ends up shipping test files that `require("vitest")` — a devDependency that
+   * a pruned production install does not have — and, worse, a type error in any
+   * test file fails the production build. A broken assertion should fail CI,
+   * not stop the API deploying.
+   */
+  "exclude": [
+    "node_modules",
+    "dist",
+    "src/**/*.test.ts",
+    "src/**/*.spec.ts",
+    "vitest.config.ts",
+    "vitest.preview.config.ts"
+  ]
+}

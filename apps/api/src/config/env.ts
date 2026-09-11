@@ -88,6 +88,22 @@ const envSchema = z.object({
   SMTP_URL: z.string().optional(),
 
   /**
+   * Resend API key. **Preferred over SMTP_URL, and required in production.**
+   *
+   * Railway blocks outbound SMTP — ports 25, 465, 587 and 2525 — on every plan
+   * below Pro, to keep their address space off spam blocklists. The block shows
+   * up as a connection timeout rather than a refusal, so a perfectly correct
+   * SMTP_URL simply stalls for the full socket timeout and reports something
+   * that reads like a wrong hostname.
+   *
+   * HTTPS on 443 is not blocked, so this is the only transport that works on
+   * the host the API actually runs on. SMTP_URL stays supported for local
+   * development and for a future move to a host that allows it; when both are
+   * set, this one wins.
+   */
+  RESEND_API_KEY: z.string().optional(),
+
+  /**
    * The From address. Must be on a domain the SMTP provider has verified, or
    * mail is accepted by the relay and then quietly dropped or spam-filed.
    *

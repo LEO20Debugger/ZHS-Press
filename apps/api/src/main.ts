@@ -79,10 +79,6 @@ async function bootstrap(): Promise<void> {
   // upload attempt, which might be days later.
   await app.get(StorageService).verifyWritable();
 
-  // Same reasoning: a rejected SMTP password should appear in the deploy log,
-  // not be discovered by a customer who paid and got no receipt.
-  await app.get(MailService).verifyTransport();
-
   app.enableShutdownHooks();
 
   const port = resolvePort({
@@ -96,6 +92,22 @@ async function bootstrap(): Promise<void> {
   await app.listen(port, '0.0.0.0');
 
   new Logger('Bootstrap').log(`API listening on port ${port}`);
+
+  /*
+   * Mail is checked after the port is open, and not awaited.
+   *
+   * It makes a network call to the mail provider, and a blocked or slow one
+   * costs the full timeout — ten seconds during which the process is running
+   * but not listening, so the platform's health check sees a dead app. Nothing
+   * about serving the catalogue depends on the answer; it is diagnostics, and
+   * diagnostics must not gate readiness.
+   */
+  void app
+    .get(MailService)
+    .verifyTransport()
+    .catch((error) => {
+      new Logger('Bootstrap').error(`Mail check failed: ${(error as Error).message}`);
+    });
 }
 
 void bootstrap();
