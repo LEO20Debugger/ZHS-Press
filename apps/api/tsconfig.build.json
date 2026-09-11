@@ -9,7 +9,19 @@
      * is actively harmful: it lets a check pass against a cache while the real
      * compile fails, which is how a broken build reaches a deploy.
      */
-    "incremental": false
+    "incremental": false,
+
+    /*
+     * A failed compile must produce no output.
+     *
+     * tsc emits by default even when it reports errors, so a build with 57 type
+     * errors still writes a dist — one that looks present and is broken in
+     * whatever way the errors describe. Since a deploy is "is dist/main.js
+     * there?", that turns a compile failure into a runtime mystery.
+     *
+     * Fail loudly at build time and leave nothing behind instead.
+     */
+    "noEmitOnError": true
   },
   /*
    * Tests, fixtures and tool configs never belong in dist.
