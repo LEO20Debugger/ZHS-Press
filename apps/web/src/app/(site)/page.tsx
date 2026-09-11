@@ -46,8 +46,8 @@ export default async function HomePage() {
             </div>
 
             <p className="rise prose-editorial mt-6 text-ink-muted" style={{ '--rise-delay': '340ms' } as React.CSSProperties}>
-              ZHS Press publishes picture books for young readers, the literary arts magazine{' '}
-              <em>Light</em>, and journals with covers by the artists we work with. Everything we
+              ZHS Press publishes picture books for young readers, the literary arts magazine (
+              <em>Light</em>), and journals with covers by the artists we work with. Everything we
               make is available here and on Amazon.
             </p>
 
