@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { LogoMark } from './logo-mark';
 import { CartCount } from './cart-count';
 import { HandDrawnRule } from './primitives';
 import { NewsletterForm } from './newsletter-form';
@@ -20,8 +21,18 @@ export function SiteHeader() {
   return (
     <header className="sticky top-0 z-50 border-b border-rule bg-paper/95 backdrop-blur">
       <div className="shell flex items-center justify-between gap-8 py-4">
-        <Link href="/" className="font-display text-h3 tracking-tight">
-          ZHS&nbsp;Press
+        {/*
+          The mark alone, not the full lockup: at this height the tagline would
+          set around 4px tall and read as smudge rather than words. The name is
+          still carried by the link's aria-label — an image of text is not text.
+
+          Inlined rather than loaded: it paints with the first HTML response
+          instead of after a second request, so the logo is never briefly
+          missing at the top of the page, and it takes its colour from
+          `text-ink` through currentColor.
+        */}
+        <Link href="/" className="flex items-center" aria-label="ZHS Press — home">
+          <LogoMark className="h-9 w-auto text-ink md:h-10" />
         </Link>
 
         <nav aria-label="Primary" className="hidden md:block">
@@ -117,7 +128,25 @@ export function SiteFooter() {
           </div>
         </div>
 
-        <div className="mt-16 flex flex-wrap items-center justify-between gap-4 border-t border-rule pt-8 text-caption text-ink-muted">
+        {/*
+          The full lockup goes here and nowhere else.
+
+          The footer is the one place with room to set the tagline at a legible
+          size, so "Zenith Highest Story-Telling Press" — which is the press's
+          actual name — appears once per page without crowding the header.
+        */}
+        <div className="mt-16 border-t border-rule pt-8">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/brand/logo-lockup.svg"
+            alt="Zenith Highest Story-Telling Press"
+            width={180}
+            height={127}
+            className="h-auto w-[150px] md:w-[180px]"
+          />
+        </div>
+
+        <div className="mt-8 flex flex-wrap items-center justify-between gap-4 text-caption text-ink-muted">
           <p>© {new Date().getFullYear()} ZHS Press. All rights reserved.</p>
           <p>
             <em className="font-editorial">Light</em> is published by ZHS Press.

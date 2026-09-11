@@ -3,8 +3,9 @@
 import { useState, type FormEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
+import { LogoMark } from '@/components/logo-mark';
 import { PasswordInput } from '@/components/password-input';
-import { Button, Eyebrow, HandDrawnRule } from '@/components/primitives';
+import { Button, HandDrawnRule } from '@/components/primitives';
 
 const FIELD =
   'w-full border border-rule bg-paper-raised px-4 py-3 font-ui text-small text-ink ' +
@@ -81,8 +82,10 @@ function LoginForm() {
 export default function AdminLoginPage() {
   return (
     <div className="mx-auto max-w-sm py-16">
-      <Eyebrow>ZHS Press</Eyebrow>
-      <h1 className="mt-4 font-display text-h1">Sign in</h1>
+      {/* alt="" — the heading below already names the page, so announcing the
+          logo as well would just read the brand twice to a screen reader. */}
+      <LogoMark className="h-8 w-auto text-ink" />
+      <h1 className="mt-6 font-display text-h1">Sign in</h1>
       <HandDrawnRule className="mt-4 max-w-[140px] text-terracotta" />
       <Suspense fallback={<p className="mt-10 text-small text-ink-muted">Loading…</p>}>
         <LoginForm />

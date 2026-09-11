@@ -25,10 +25,13 @@
     "db:admin:deploy": "pnpm --filter @zhs/db admin:deploy",
     "sample:accents": "node scripts/sample-accents.mjs",
     "mail:preview": "pnpm --filter @zhs/api mail:preview",
-    "mail:send-test": "pnpm --filter @zhs/api build && node scripts/send-test-email.mjs"
+    "mail:send-test": "pnpm --filter @zhs/api build && node scripts/send-test-email.mjs",
+    "brand:build": "node scripts/build-brand-assets.mjs",
+    "brand:svg": "node scripts/trace-logo-svg.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.10.5",
+    "potrace": "2.1.8",
     "prettier": "^3.4.2",
     "sharp": "^0.33.5",
     "turbo": "^2.3.3",

@@ -6,12 +6,6 @@
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["--filter", "@zhs/web", "dev"],
       "port": 3000
-    },
-    {
-      "name": "api",
-      "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--filter", "@zhs/api", "dev"],
-      "port": 4000
     }
   ]
 }

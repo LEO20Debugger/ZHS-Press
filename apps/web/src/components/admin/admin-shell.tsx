@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { LogoMark } from '../logo-mark';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
 import {
@@ -126,8 +127,15 @@ export function AdminShell({ children }: { children: ReactNode }) {
       */}
       <header className="sticky top-0 z-30 border-b border-rule bg-paper">
         <div className="shell flex items-center justify-between gap-4 py-3 md:py-4">
-          <Link href="/admin" className="font-display text-h3">
-            ZHS&nbsp;Admin
+          {/*
+            Mark plus the word "Admin", so a glance at a browser tab or a shared
+            screenshot never leaves any doubt which side of the site this is.
+          */}
+          <Link href="/admin" className="flex items-center gap-2.5" aria-label="ZHS Admin — dashboard">
+            <LogoMark className="h-7 w-auto text-ink" />
+            <span className="font-display text-h3" aria-hidden="true">
+              Admin
+            </span>
           </Link>
 
           {/* Desktop navigation. Hidden on phones, where the menu takes over. */}
