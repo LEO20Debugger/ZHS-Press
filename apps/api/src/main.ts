@@ -5,11 +5,15 @@ import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
+import { installProcessDiagnostics } from './common/process-diagnostics';
 import { resolvePort, type Env } from './config/env';
 import { MailService } from './mail/mail.service';
 import { StorageService } from './storage/storage.service';
 
 async function bootstrap(): Promise<void> {
+  // Before anything else, so a failure during startup is also explained.
+  installProcessDiagnostics();
+
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     // Kept for any future provider that signs an HMAC over the exact bytes.
     // Flutterwave does not: its verif-hash is a static shared secret echoed

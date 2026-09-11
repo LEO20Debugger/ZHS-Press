@@ -37,6 +37,21 @@ export function createDb(config: DbConfig): Database {
     supportBigNumbers: true,
   });
 
+  /*
+   * No pool-level 'error' listener here, deliberately — it would be dead code.
+   *
+   * The obvious worry is that a pooled connection dying while idle (server
+   * wait_timeout, a proxy closing the socket) emits an unhandled 'error' and
+   * takes the process down, since Node throws unhandled 'error' events. Two
+   * things in mysql2 rule that out, both checked in its source rather than
+   * assumed:
+   *
+   * 1. `PoolConnection`'s constructor attaches `once('error', …)` to every
+   *    connection it creates, so the event is never unhandled.
+   * 2. The promise wrapper only forwards 'acquire', 'connection', 'enqueue'
+   *    and 'release' (lib/promise/inherit_events.js), so a listener attached
+   *    to this pool would not receive 'error' anyway.
+   */
   db = drizzle(pool, { schema, mode: 'default' });
   return db;
 }
