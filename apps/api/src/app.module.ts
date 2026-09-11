@@ -8,6 +8,7 @@ import { CartModule } from './cart/cart.module';
 import { CheckoutModule } from './checkout/checkout.module';
 import { DbModule } from './db/db.module';
 import { HealthController } from './health/health.controller';
+import { MailModule } from './mail/mail.module';
 import { ProductsModule } from './products/products.module';
 import { StorageModule } from './storage/storage.module';
 
@@ -20,6 +21,8 @@ import { StorageModule } from './storage/storage.module';
       validate: validateEnv,
     }),
     DbModule,
+    // Global, and before the modules that inject it.
+    MailModule,
     ProductsModule,
     CaptureModule,
     CartModule,

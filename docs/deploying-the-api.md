@@ -34,6 +34,27 @@ Reference the database with `${{ MySQL.MYSQL_URL }}` rather than pasting the URL
 Railway rotates credentials when a database is restored or moved, and a pasted value
 goes stale silently.
 
+## Uploaded artwork
+
+Image upload re-encodes the file, writes it to disk, and stores that file's public URL
+in the database. Two variables control it, and **neither default is usable in
+production** — leave them unset and every upload fails with `ASSET_BASE_URL is still
+pointing at localhost`, which is the API refusing to persist a URL nothing can load.
+
+| Variable | Value |
+| --- | --- |
+| `UPLOAD_DIR` | The mount path of a Railway volume, e.g. `/data/uploads`. Not the default `./uploads` |
+| `ASSET_BASE_URL` | `https://<your-api>.up.railway.app/uploads` |
+
+Add the volume first: the API service → Settings → Volumes → mount at `/data`. A
+container filesystem does not survive a redeploy or a restart, so without a volume the
+catalogue keeps rows pointing at files thrown away with the old container.
+
+`ASSET_BASE_URL` must be on the same host as Vercel's `API_BASE_URL`. `next.config.mjs`
+derives the single remote host `next/image` will load artwork from out of
+`API_BASE_URL`, so a CDN domain here fails with "Invalid src prop" until that is
+widened to match.
+
 ## Migrations
 
 **They run as a pre-deploy step, never on application boot.** Railway runs

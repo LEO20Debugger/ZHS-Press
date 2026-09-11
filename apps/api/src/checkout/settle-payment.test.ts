@@ -66,6 +66,10 @@ function makeService(state: StubState): CheckoutService {
     { view: async () => ({ lines: [] }) } as never,
     {} as never,
     { get: () => 'http://localhost:3000' } as never,
+    // MailService. Receipts are a side effect of settling, not part of it, so
+    // these tests assert nothing about mail — but the stub must not throw, or a
+    // send failure would look like a settlement failure.
+    { send: async () => ({ sent: true }) } as never,
   );
 }
 

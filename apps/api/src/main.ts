@@ -6,6 +6,7 @@ import type { NestExpressApplication } from '@nestjs/platform-express';
 import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 import { resolvePort, type Env } from './config/env';
+import { MailService } from './mail/mail.service';
 import { StorageService } from './storage/storage.service';
 
 async function bootstrap(): Promise<void> {
@@ -77,6 +78,10 @@ async function bootstrap(): Promise<void> {
   // Surfaces a bad UPLOAD_DIR in the deploy log rather than on the first
   // upload attempt, which might be days later.
   await app.get(StorageService).verifyWritable();
+
+  // Same reasoning: a rejected SMTP password should appear in the deploy log,
+  // not be discovered by a customer who paid and got no receipt.
+  await app.get(MailService).verifyTransport();
 
   app.enableShutdownHooks();
 

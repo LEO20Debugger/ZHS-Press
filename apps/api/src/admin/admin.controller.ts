@@ -27,7 +27,11 @@ import {
   type AddProductImageInput,
   type UpsertProductInput,
 } from '@zhs/shared';
+import { ConfigService } from '@nestjs/config';
+import type { Env } from '../config/env';
 import { DB } from '../db/db.module';
+import { MailService } from '../mail/mail.service';
+import { orderShipped, url } from '../mail/templates';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
 import { AdminGuard, Roles, type AuthenticatedRequest } from '../auth/admin.guard';
 import { AdminProductsService } from './admin-products.service';
@@ -52,6 +56,8 @@ export class AdminController {
     private readonly parity: ParityService,
     private readonly audit: AuditService,
     private readonly storage: StorageService,
+    private readonly mail: MailService,
+    private readonly config: ConfigService<Env, true>,
   ) {}
 
   /* ---- Catalogue: editors and admins ---------------------------------- */
@@ -243,13 +249,43 @@ export class AdminController {
   async fulfilOrder(@Param('orderNumber') orderNumber: string) {
     // Only a paid order can be marked fulfilled. Guarding it in the WHERE
     // clause means a pending order cannot be shipped by an accidental click.
-    await this.db
+    const result = await this.db
       .update(schema.orders)
       .set({ status: 'fulfilled', fulfilledAt: new Date() })
       .where(
         and(eq(schema.orders.orderNumber, orderNumber), eq(schema.orders.status, 'paid')),
       );
-    return { ok: true };
+
+    /*
+     * The shipped email, sent only when this call actually changed something.
+     *
+     * Marking an already-fulfilled order fulfilled again affects zero rows —
+     * the WHERE clause requires `paid` — and must not mail the customer a
+     * second time. Reading affectedRows is what separates the real transition
+     * from a double click, exactly as the payment webhook does.
+     */
+    const changed = Number((result as unknown as { affectedRows?: number }).affectedRows ?? 0);
+    if (changed > 0) {
+      const order = await this.db.query.orders.findFirst({
+        where: eq(schema.orders.orderNumber, orderNumber),
+      });
+
+      if (order) {
+        await this.mail.send(
+          order.email,
+          orderShipped({
+            orderNumber: order.orderNumber,
+            orderUrl: url(
+              this.config.get('WEB_BASE_URL', { infer: true }),
+              `order/${encodeURIComponent(order.orderNumber)}`,
+            ),
+          }),
+          `order shipped ${order.orderNumber}`,
+        );
+      }
+    }
+
+    return { ok: true, notified: changed > 0 };
   }
 
   @Get('audit')

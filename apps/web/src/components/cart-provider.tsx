@@ -19,6 +19,7 @@ interface CartContextValue {
   error: string | null;
   addItem: (productId: number, quantity?: number) => Promise<boolean>;
   updateItem: (productId: number, quantity: number) => Promise<void>;
+  clear: () => Promise<void>;
   refresh: () => Promise<void>;
 }
 
@@ -97,9 +98,34 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  /**
+   * Empties the cart in one request.
+   *
+   * Deliberately not a loop of `updateItem(id, 0)`: that is one round trip per
+   * line, and a failure partway through leaves the customer looking at a cart
+   * that is neither what they had nor empty.
+   */
+  const clear = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch('/api/cart', { method: 'DELETE' });
+      if (response.ok) {
+        setCart((await response.json()) as CartView);
+      } else {
+        const payload = await response.json().catch(() => null);
+        setError(payload?.message ?? 'Could not empty your cart.');
+      }
+    } catch {
+      setError('Could not empty your cart.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   const value = useMemo(
-    () => ({ cart, loading, error, addItem, updateItem, refresh }),
-    [cart, loading, error, addItem, updateItem, refresh],
+    () => ({ cart, loading, error, addItem, updateItem, clear, refresh }),
+    [cart, loading, error, addItem, updateItem, clear, refresh],
   );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

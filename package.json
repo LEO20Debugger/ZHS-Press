@@ -23,7 +23,9 @@
     "db:migrate:deploy": "pnpm --filter @zhs/db migrate:deploy",
     "db:admin": "pnpm --filter @zhs/db admin",
     "db:admin:deploy": "pnpm --filter @zhs/db admin:deploy",
-    "sample:accents": "node scripts/sample-accents.mjs"
+    "sample:accents": "node scripts/sample-accents.mjs",
+    "mail:preview": "pnpm --filter @zhs/api mail:preview",
+    "mail:send-test": "pnpm --filter @zhs/api build && node scripts/send-test-email.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.10.5",

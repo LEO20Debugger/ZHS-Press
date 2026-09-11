@@ -24,3 +24,6 @@ uploads/
 
 # Original cover artwork, kept locally as the source for re-encoding.
 apps/web/public/covers/originals/
+
+# Generated email previews (pnpm mail:preview)
+apps/api/email-previews/

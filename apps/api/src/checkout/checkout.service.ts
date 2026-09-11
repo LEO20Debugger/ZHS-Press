@@ -8,11 +8,14 @@ import {
   paymentMatchesOrder,
   type CheckoutSession,
   type CreateCheckoutInput,
+  type Currency,
   type OrderView,
 } from '@zhs/shared';
 import { DB } from '../db/db.module';
 import type { Env } from '../config/env';
 import { CartService } from '../cart/cart.service';
+import { MailService } from '../mail/mail.service';
+import { orderReceipt, url } from '../mail/templates';
 import { FlutterwaveService } from '../payments/flutterwave.service';
 
 /** Human-readable, unambiguous: no O/0 or I/1 confusion when read aloud. */
@@ -36,6 +39,7 @@ export class CheckoutService {
     private readonly cart: CartService,
     private readonly flutterwave: FlutterwaveService,
     private readonly config: ConfigService<Env, true>,
+    private readonly mail: MailService,
   ) {}
 
   /**
@@ -212,7 +216,7 @@ export class CheckoutService {
       return { handled: false, reason: 'amount_mismatch' };
     }
 
-    return this.db.transaction(async (tx) => {
+    const outcome = await this.db.transaction(async (tx) => {
       // Atomic claim. If another delivery already settled this payment, this
       // affects zero rows and we stop — no second decrement, no second email.
       const claim = await tx
@@ -228,7 +232,7 @@ export class CheckoutService {
 
       const claimed = Number((claim as unknown as { affectedRows?: number }).affectedRows ?? 0);
       if (claimed === 0) {
-        return { handled: true, reason: 'already_settled' };
+        return { handled: true, reason: 'already_settled' as const, receipt: false };
       }
 
       await tx
@@ -268,8 +272,91 @@ export class CheckoutService {
       }
 
       this.logger.log(`Order ${order.orderNumber} paid and stock adjusted`);
-      return { handled: true };
+      return { handled: true, receipt: true, items };
     });
+
+    /*
+     * The receipt is sent here, outside the transaction, and only by the
+     * delivery that won the claim.
+     *
+     * Outside, because an SMTP round trip inside an open transaction holds
+     * database locks for the length of a network call to a third party — and
+     * because a send that succeeded followed by a rollback would tell a
+     * customer their order was confirmed when it was not. Committing first
+     * means the worst case is a real order with no receipt, which is
+     * recoverable; the reverse is not.
+     *
+     * Only the winner, because `already_settled` is the normal case for a
+     * redelivered webhook, and Flutterwave redelivers. Sending on every
+     * delivery would mail the customer two or three times for one order.
+     */
+    if (outcome.receipt) {
+      await this.sendReceipt(order, outcome.items ?? []);
+    }
+
+    const { receipt: _receipt, items: _items, ...result } = outcome;
+    return result;
+  }
+
+  /**
+   * Emails the order receipt.
+   *
+   * Failure is swallowed after logging, deliberately. The caller is the
+   * Flutterwave webhook, and a non-2xx response makes Flutterwave redeliver —
+   * which would hit `already_settled`, so the retry could never send the
+   * receipt anyway, while making the provider's dashboard show a failing
+   * endpoint for a payment that settled perfectly.
+   */
+  private async sendReceipt(
+    order: { orderNumber: string; email: string },
+    items: Array<{
+      titleSnapshot: string;
+      quantity: number;
+      unitPriceCents: number;
+      lineTotalCents: number;
+    }>,
+  ): Promise<void> {
+    try {
+      // Re-read rather than reuse the pre-transaction row: `status` and
+      // `paidAt` have just changed, and the totals are read back from the
+      // committed state that was actually charged.
+      const fresh = await this.db.query.orders.findFirst({
+        where: eq(schema.orders.orderNumber, order.orderNumber),
+      });
+      if (!fresh) return;
+
+      await this.mail.send(
+        fresh.email,
+        orderReceipt({
+          order: {
+            orderNumber: fresh.orderNumber,
+            currency: fresh.currency as Currency,
+            subtotalCents: fresh.subtotalCents,
+            shippingCents: fresh.shippingCents,
+            taxCents: fresh.taxCents,
+            totalCents: fresh.totalCents,
+            items: items.map((item) => ({
+              titleSnapshot: item.titleSnapshot,
+              quantity: item.quantity,
+              unitPriceCents: item.unitPriceCents,
+              lineTotalCents: item.lineTotalCents,
+            })),
+            shippingAddress: fresh.shippingAddress ?? null,
+          },
+          orderUrl: url(
+            this.config.get('WEB_BASE_URL', { infer: true }),
+            `order/${encodeURIComponent(fresh.orderNumber)}`,
+          ),
+        }),
+        `order receipt ${fresh.orderNumber}`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Order ${order.orderNumber} settled but the receipt could not be built: ` +
+          (error as Error).message,
+        error as Error,
+      );
+    }
   }
 
   async findOrder(orderNumber: string): Promise<OrderView> {

@@ -2,9 +2,61 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
+import { useState } from 'react';
 import { formatMoney } from '@zhs/shared';
 import { useCart } from '@/components/cart-provider';
 import { Button, Eyebrow, HandDrawnRule } from '@/components/primitives';
+
+/**
+ * "Empty cart", with a confirmation step.
+ *
+ * Two clicks rather than one, because the button sits directly under a list of
+ * per-line Remove links and is the only irreversible control on the page — a
+ * misaimed click should not discard a cart someone spent ten minutes filling.
+ * The confirmation is inline rather than a `window.confirm`: a native dialog is
+ * unstyleable, reads as a browser warning rather than part of the shop, and
+ * behaves inconsistently on mobile.
+ */
+function EmptyCart() {
+  const { clear, loading } = useCart();
+  const [confirming, setConfirming] = useState(false);
+
+  if (!confirming) {
+    return (
+      <button
+        type="button"
+        onClick={() => setConfirming(true)}
+        className="link-underline text-caption text-ink-muted"
+      >
+        Empty cart
+      </button>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-4">
+      <span className="text-caption text-ink-muted">Remove everything?</span>
+      <button
+        type="button"
+        disabled={loading}
+        onClick={async () => {
+          await clear();
+          setConfirming(false);
+        }}
+        className="link-underline text-caption text-danger disabled:opacity-50"
+      >
+        {loading ? 'Emptying…' : 'Yes, empty it'}
+      </button>
+      <button
+        type="button"
+        onClick={() => setConfirming(false)}
+        className="link-underline text-caption text-ink-muted"
+      >
+        Keep them
+      </button>
+    </div>
+  );
+}
 
 export default function CartPage() {
   const { cart, updateItem, loading, error } = useCart();
@@ -38,7 +90,8 @@ export default function CartPage() {
       ) : null}
 
       <div className="mt-12 grid gap-16 lg:grid-cols-[1.6fr_1fr]">
-        <ul className="divide-y divide-rule border-y border-rule">
+        <div>
+          <ul className="divide-y divide-rule border-y border-rule">
           {cart.lines.map((line) => (
             <li key={line.productId} className="flex gap-6 py-6">
               <div className="cover-frame h-32 w-24 shrink-0 bg-paper-deep">
@@ -98,7 +151,12 @@ export default function CartPage() {
               </p>
             </li>
           ))}
-        </ul>
+          </ul>
+
+          <div className="mt-6 flex justify-end">
+            <EmptyCart />
+          </div>
+        </div>
 
         <aside className="lg:sticky lg:top-28 lg:self-start">
           <h2 className="eyebrow">Summary</h2>

@@ -1,4 +1,13 @@
-import { Body, Controller, Get, Headers, Post, Put, BadRequestException } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Headers,
+  Post,
+  Put,
+  BadRequestException,
+} from '@nestjs/common';
 import {
   addToCartSchema,
   updateCartItemSchema,
@@ -45,5 +54,11 @@ export class CartController {
     @Body(new ZodValidationPipe(updateCartItemSchema)) body: UpdateCartItemInput,
   ) {
     return this.cart.updateItem(requireToken(token), body);
+  }
+
+  /** Empties the cart, keeping the session. Returns the emptied cart. */
+  @Delete()
+  clear(@Headers(TOKEN_HEADER) token: string | undefined) {
+    return this.cart.clearAndView(requireToken(token));
   }
 }

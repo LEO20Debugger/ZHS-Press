@@ -5,6 +5,7 @@ import { deriveTint, validateAccent, ACCENT_PALETTE } from '@zhs/ui';
 import type { UpsertProductInput } from '@zhs/shared';
 import { DB } from '../db/db.module';
 import { AuditService } from './audit.service';
+import { WaitlistNotifier } from './waitlist-notifier.service';
 import type { AdminPrincipal } from '../auth/auth.service';
 
 @Injectable()
@@ -12,6 +13,7 @@ export class AdminProductsService {
   constructor(
     @Inject(DB) private readonly db: Database,
     private readonly audit: AuditService,
+    private readonly waitlist: WaitlistNotifier,
   ) {}
 
   /**
@@ -194,6 +196,18 @@ export class AdminProductsService {
     }
 
     await this.audit.record(actor, 'product.update', 'product', String(id), changes);
+
+    /*
+     * A title going on sale is the moment its waitlist is owed an email.
+     *
+     * Keyed off the *transition*, so saving an already-available product does
+     * not re-mail anyone. Detached, because the list may be long — see
+     * WaitlistNotifier.notifyInBackground.
+     */
+    if (WaitlistNotifier.shouldNotify(before.status, input.status)) {
+      this.waitlist.notifyInBackground(id);
+    }
+
     return this.findOne(id);
   }
 

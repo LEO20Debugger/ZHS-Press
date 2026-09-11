@@ -69,6 +69,44 @@ const envSchema = z.object({
   FLW_SECRET_KEY: z.string().optional(),
   FLW_SECRET_HASH: z.string().optional(),
   FLW_BASE_URL: z.string().url().default('https://api.flutterwave.com/v3'),
+
+  /**
+   * Outbound email.
+   *
+   * A single SMTP URL rather than four separate host/port/user/pass variables:
+   * every provider (Resend, Postmark, SES, Gmail) hands you exactly this
+   * string, so there is one thing to paste and one thing to get wrong.
+   *
+   *   smtps://user:pass@smtp.provider.com:465
+   *
+   * Optional at boot, deliberately. The catalogue and the admin area have no
+   * business failing to start because email is not configured yet — MailService
+   * logs what it would have sent instead, so every flow stays testable. What is
+   * not acceptable is that silence going unnoticed in production, which is why
+   * main.ts warns loudly at boot when this is missing there.
+   */
+  SMTP_URL: z.string().optional(),
+
+  /**
+   * The From address. Must be on a domain the SMTP provider has verified, or
+   * mail is accepted by the relay and then quietly dropped or spam-filed.
+   *
+   * `Name <address>` form is allowed; a bare address is fine too.
+   */
+  MAIL_FROM: z.string().default('ZHS Press <hello@zhspress.org>'),
+
+  /**
+   * Where replies go, when From is a no-reply sender. A customer replying to
+   * an order receipt is a customer with a question, and that reply should
+   * reach a person.
+   */
+  MAIL_REPLY_TO: z.string().optional(),
+
+  /**
+   * Internal address notified about new submissions. Falls back to MAIL_FROM,
+   * so the press is never the only party left uninformed.
+   */
+  PRESS_NOTIFY_EMAIL: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

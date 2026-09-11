@@ -170,11 +170,23 @@ export class CartService {
     return this.view(token);
   }
 
-  /** Called after an order is paid. */
+  /** Called after an order is paid, and by the cart page's "Empty cart". */
   async clear(token: string): Promise<void> {
     const cart = await this.findCart(token);
     if (!cart) return;
     await this.db.delete(schema.cartItems).where(eq(schema.cartItems.cartId, cart.id));
+  }
+
+  /**
+   * Clears and returns the emptied cart.
+   *
+   * The cart row itself survives — only its items go. Deleting the cart would
+   * invalidate the session token in the customer's cookie, so the next add
+   * would have to mint a new one.
+   */
+  async clearAndView(token: string): Promise<CartView> {
+    await this.clear(token);
+    return this.view(token);
   }
 
   /** Housekeeping for a scheduled job; abandoned carts should not accumulate. */
