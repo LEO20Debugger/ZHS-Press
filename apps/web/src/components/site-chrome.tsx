@@ -42,7 +42,7 @@ export function SiteHeader() {
         */}
         <Link href="/" className="flex items-center gap-3" aria-label="ZHS Press — home">
           <LogoMark className="h-9 w-auto shrink-0 text-ink md:h-10" />
-          <LogoTagline className="hidden h-7 w-auto text-ink sm:block md:h-8" />
+          <LogoTagline className="hidden h-6 w-auto text-ink sm:block md:h-7" />
         </Link>
 
         <nav aria-label="Primary" className="hidden md:block">

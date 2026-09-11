@@ -9,6 +9,7 @@ import {
   submissionAlert,
   submissionReceived,
   waitlistRelease,
+  configureBrand,
   type Mail,
 } from './templates';
 
@@ -27,6 +28,15 @@ import {
  * re-renders the whole thing through Word. Use this to settle copy and layout,
  * then send one real message to a live address before launch.
  */
+
+/*
+ * Previews render the logo build, not the wordmark fallback.
+ *
+ * The wordmark is only what a local, non-https deployment produces; every real
+ * send from production carries the image. Previewing the fallback would be
+ * reviewing a version no recipient receives.
+ */
+configureBrand(process.env.WEB_BASE_URL ?? 'https://zhs-press.vercel.app');
 
 const SAMPLES: Array<{ file: string; label: string; mail: Mail }> = [
   {

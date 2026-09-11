@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { createTransport, type Transporter } from 'nodemailer';
 import { ResendTransport, addressDomain } from './resend-transport';
 import type { Env } from '../config/env';
-import type { Mail } from './templates';
+import { configureBrand, type Mail } from './templates';
 
 export interface SmtpConnection {
   host: string;
@@ -153,6 +153,26 @@ export class MailService {
    */
   async verifyTransport(): Promise<void> {
     const isProduction = this.config.get('NODE_ENV', { infer: true }) === 'production';
+
+    /*
+     * Point the templates at the logo, served from the public site.
+     *
+     * Only over https, and never at localhost: the URL is embedded in a message
+     * that leaves this machine, so a local address renders as a broken image in
+     * someone else's inbox forever. Falling back to the text wordmark is the
+     * better outcome, and in development it is the only one that works.
+     */
+    const webBaseUrl = this.config.get('WEB_BASE_URL', { infer: true });
+    const usableLogoHost =
+      webBaseUrl.startsWith('https://') && !/localhost|127\.0\.0\.1/.test(webBaseUrl);
+    configureBrand(usableLogoHost ? webBaseUrl : null);
+
+    if (!usableLogoHost) {
+      this.logger.log(
+        `Email logo disabled — WEB_BASE_URL (${webBaseUrl}) is not a public https ` +
+          'address, so messages use the text wordmark.',
+      );
+    }
 
     const http = this.httpTransport();
     if (http) {

@@ -84,7 +84,7 @@ const CROPS = {
  * anti-aliasing intact — trying to remap the RGB instead leaves grey fringes
  * wherever the edges were blended against the old colour.
  */
-async function tinted(rawCrop, width, colour, outPath) {
+async function tinted(rawCrop, width, colour, outPath, { background = null } = {}) {
   const crop = await clamp(rawCrop);
   const meta = { width, height: Math.round((width * crop.height) / crop.width) };
 
@@ -96,15 +96,23 @@ async function tinted(rawCrop, width, colour, outPath) {
     .raw()
     .toBuffer();
 
-  await sharp({
+  const pipeline = sharp({
     create: {
       width: meta.width,
       height: meta.height,
       channels: 3,
       background: colour,
     },
-  })
-    .joinChannel(alpha, { raw: { width: meta.width, height: meta.height, channels: 1 } })
+  }).joinChannel(alpha, { raw: { width: meta.width, height: meta.height, channels: 1 } });
+
+  /*
+   * `flatten` composites the ink onto a solid ground, and `removeAlpha` drops
+   * the channel afterwards — flatten alone leaves a fully-opaque alpha channel
+   * in place, which a palette PNG happily preserves. The email asset must have
+   * no transparency at all, so a client that inverts backgrounds cannot show
+   * dark ink on its own dark ground.
+   */
+  await (background ? pipeline.flatten({ background }).removeAlpha() : pipeline)
     .png({ compressionLevel: 9, palette: true })
     .toFile(outPath);
 
@@ -177,6 +185,25 @@ async function main() {
   made.push([
     'logo-lockup-light.png',
     await tinted(CROPS.lightLockup, 640, PAPER_RAISED, join(brandDir, 'logo-lockup-light.png')),
+  ]);
+
+  /*
+   * A dedicated email logo, with the card's background baked in.
+   *
+   * Everything else here is transparent, which is right on the web. In email it
+   * is a trap: Gmail and Outlook.com both invert backgrounds in dark mode, and
+   * an --ink logo on a now-dark ground is invisible. Baking --paper-raised in
+   * means the worst case is a light tile in a dark message — visibly a logo,
+   * rather than a blank space.
+   *
+   * PNG, not SVG: no major mail client renders SVG. It is served at 2x the
+   * rendered width so it stays sharp on a phone.
+   */
+  made.push([
+    'logo-email.png',
+    await tinted(CROPS.darkLockup, 264, INK, join(brandDir, 'logo-email.png'), {
+      background: PAPER_RAISED,
+    }),
   ]);
 
   // Next's App Router picks these up by filename and emits the <link> tags.

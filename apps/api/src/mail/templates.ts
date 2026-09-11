@@ -42,6 +42,21 @@ export interface Mail {
 }
 
 /**
+ * Where the email logo is served from, or null for the text wordmark.
+ *
+ * Module-level rather than a parameter on all seven templates, because it is a
+ * deployment constant rather than per-message data — it is set once at boot
+ * from WEB_BASE_URL and never varies between messages. `configureBrand(null)`
+ * restores the text wordmark, which is what the tests run against so they stay
+ * independent of whether a base URL happens to be configured.
+ */
+let brandBaseUrl: string | null = null;
+
+export function configureBrand(baseUrl: string | null): void {
+  brandBaseUrl = baseUrl ? baseUrl.replace(/\/+$/, '') : null;
+}
+
+/**
  * Escapes a value for HTML interpolation.
  *
  * Mandatory on every interpolated value in this file, without exception.
@@ -82,6 +97,34 @@ export function url(base: string, path: string): string {
  * It is hidden in the body itself by zero dimensions plus `display: none`,
  * belt and braces, because different clients defeat different halves of that.
  */
+/**
+ * The masthead: the logo when one is configured, the wordmark otherwise.
+ *
+ * Three constraints decide the shape of this, and all three are email-specific:
+ *
+ * 1. **PNG, never SVG.** No major mail client renders SVG — Gmail, Outlook and
+ *    Apple Mail all drop it — so the crisp vector used on the site is useless
+ *    here and a 2x raster is the sharpest thing available.
+ * 2. **Images are blocked by default** in Outlook desktop and plenty of
+ *    corporate gateways. The `alt` text is therefore not a fallback nicety, it
+ *    is what a good share of recipients actually see — so it carries the type
+ *    styling of the wordmark it replaces. Blocked, it still reads as ZHS PRESS
+ *    in letterspaced caps rather than as a broken-image label.
+ * 3. **Dimensions are set as attributes**, not only in CSS, because a client
+ *    that blocks the image still reserves the box from them.
+ */
+function wordmark(): string {
+  const wordmarkStyle =
+    `font-family:${DISPLAY_STACK};font-size:16px;letter-spacing:0.12em;` +
+    `text-transform:uppercase;color:${INK};`;
+
+  if (!brandBaseUrl) {
+    return `<span class="wordmark" style="${wordmarkStyle}">ZHS&nbsp;Press</span>`;
+  }
+
+  return `<img src="${esc(`${brandBaseUrl}/brand/logo-email.png`)}" width="132" height="93" alt="ZHS Press" style="display:block;border:0;outline:none;text-decoration:none;width:132px;height:auto;${wordmarkStyle}">`;
+}
+
 function shell(bodyHtml: string, { preheader }: { preheader: string }): string {
   return `<!doctype html>
 <html lang="en">
@@ -128,7 +171,7 @@ function shell(bodyHtml: string, { preheader }: { preheader: string }): string {
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:560px;">
 
 <tr><td style="padding-bottom:16px;">
-<span class="wordmark" style="font-family:${DISPLAY_STACK};font-size:16px;letter-spacing:0.12em;text-transform:uppercase;color:${INK};">ZHS&nbsp;Press</span>
+${wordmark()}
 </td></tr>
 
 <tr><td class="card" style="background:${PAPER_RAISED};border:1px solid ${RULE};padding:20px 16px;">

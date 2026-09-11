@@ -1,6 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { parseSmtpUrl } from './mail.service';
 import {
+  configureBrand,
   newsletterConfirmation,
   newsletterWelcome,
   orderReceipt,
@@ -200,6 +201,93 @@ describe('narrow screens', () => {
     });
     // An address is one token with no break opportunity, so it needs the hint.
     expect(mail.html).toContain('word-break:break-word');
+  });
+});
+
+describe('brand logo in the masthead', () => {
+  // Every other test in this file runs against the unconfigured default, so the
+  // wordmark is restored after each case here.
+  afterEach(() => configureBrand(null));
+
+  it('uses the text wordmark when no base URL is configured', () => {
+    configureBrand(null);
+    const html = newsletterConfirmation({ confirmUrl: 'https://x.test/c' }).html;
+    expect(html).toContain('ZHS&nbsp;Press');
+    expect(html).not.toContain('logo-email.png');
+  });
+
+  it('uses the PNG logo when configured, never the SVG', () => {
+    // No major mail client renders SVG, so the sharp vector used on the site is
+    // useless here — this must be the raster.
+    configureBrand('https://zhspress.org');
+    const html = newsletterConfirmation({ confirmUrl: 'https://x.test/c' }).html;
+    expect(html).toContain('https://zhspress.org/brand/logo-email.png');
+    expect(html).not.toContain('.svg');
+  });
+
+  it('strips a trailing slash rather than producing a doubled one', () => {
+    configureBrand('https://zhspress.org/');
+    expect(newsletterConfirmation({ confirmUrl: 'https://x.test/c' }).html).toContain(
+      'https://zhspress.org/brand/logo-email.png',
+    );
+  });
+
+  it('carries alt text styled like the wordmark it replaces', () => {
+    /*
+     * Outlook desktop and many corporate gateways block images by default, so
+     * the alt text is what a real share of recipients see. Typed like the
+     * wordmark, a blocked image still reads as ZHS PRESS in letterspaced caps
+     * instead of as a broken-image label.
+     */
+    configureBrand('https://zhspress.org');
+    const html = newsletterConfirmation({ confirmUrl: 'https://x.test/c' }).html;
+    const img = /<img[^>]*logo-email\.png[^>]*>/.exec(html)?.[0] ?? '';
+    expect(img).toContain('alt="ZHS Press"');
+    expect(img).toContain('text-transform:uppercase');
+    expect(img).toContain('letter-spacing');
+  });
+
+  it('sets width and height as attributes so a blocked image still reserves space', () => {
+    configureBrand('https://zhspress.org');
+    const img =
+      /<img[^>]*logo-email\.png[^>]*>/.exec(
+        newsletterConfirmation({ confirmUrl: 'https://x.test/c' }).html,
+      )?.[0] ?? '';
+    expect(img).toMatch(/width="\d+"/);
+    expect(img).toMatch(/height="\d+"/);
+  });
+
+  it('is narrow enough for a 280px screen', () => {
+    /*
+     * The narrow-screen suite above cannot catch this: it builds its messages
+     * once at module load, before any base URL is set, so it only ever sees the
+     * wordmark. The logo carries a fixed width attribute by design — a blocked
+     * image needs it to reserve space — so the width itself has to be checked.
+     *
+     * 280px screen minus the frame's 10px and the card's 16px of padding on
+     * each side leaves 228px of content.
+     */
+    configureBrand('https://zhspress.org');
+    const img =
+      /<img[^>]*logo-email\.png[^>]*>/.exec(
+        newsletterConfirmation({ confirmUrl: 'https://x.test/c' }).html,
+      )?.[0] ?? '';
+    const width = Number(/width="(\d+)"/.exec(img)?.[1] ?? 0);
+    expect(width).toBeGreaterThan(0);
+    expect(width).toBeLessThanOrEqual(228);
+  });
+
+  it('reaches every template, not just the one under test', () => {
+    configureBrand('https://zhspress.org');
+    for (const build of [
+      () => newsletterWelcome({ unsubscribeUrl: 'https://x.test/u' }),
+      () => orderReceipt({ order: ORDER, orderUrl: 'https://x.test/o' }),
+      () => orderShipped({ orderNumber: 'ZHS-1', orderUrl: 'https://x.test/o' }),
+      () => submissionReceived({ name: 'A', title: 'T' }),
+      () => waitlistRelease({ title: 'T', productUrl: 'https://x.test/p' }),
+    ]) {
+      expect(build().html).toContain('logo-email.png');
+    }
   });
 });
 
