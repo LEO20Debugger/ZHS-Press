@@ -109,23 +109,44 @@ async function tinted(rawCrop, width, colour, outPath, { background = null } = {
     .raw()
     .toBuffer();
 
-  const pipeline = sharp({
+  const tintedMark = await sharp({
     create: {
       width: meta.width,
       height: meta.height,
       channels: 3,
       background: colour,
     },
-  }).joinChannel(alpha, { raw: { width: meta.width, height: meta.height, channels: 1 } });
+  })
+    .joinChannel(alpha, { raw: { width: meta.width, height: meta.height, channels: 1 } })
+    .png()
+    .toBuffer();
+
+  if (!background) {
+    await sharp(tintedMark).png({ compressionLevel: 9, palette: true }).toFile(outPath);
+    return meta;
+  }
 
   /*
-   * `flatten` composites the ink onto a solid ground, and `removeAlpha` drops
-   * the channel afterwards — flatten alone leaves a fully-opaque alpha channel
-   * in place, which a palette PNG happily preserves. The email asset must have
-   * no transparency at all, so a client that inverts backgrounds cannot show
-   * dark ink on its own dark ground.
+   * A second pass, and it has to be — this cannot be chained onto the pipeline
+   * above.
+   *
+   * sharp applies operations in its own fixed internal order, not the order
+   * they are chained. `flatten` runs *before* `joinChannel`, so chaining
+   * `.joinChannel(alpha).flatten({ background })` flattens an image that has no
+   * alpha yet, then adds the alpha, then a `removeAlpha` strips it again — and
+   * the result is a solid rectangle of `colour` with no artwork in it at all.
+   *
+   * That shipped once. The asset reported `hasAlpha: false` exactly as
+   * intended, which is what made it look correct without being correct, so the
+   * check at the end of this script now samples pixels rather than metadata.
+   *
+   * Compositing the finished mark onto a solid canvas gives the same result and
+   * has no ordering ambiguity.
    */
-  await (background ? pipeline.flatten({ background }).removeAlpha() : pipeline)
+  await sharp({
+    create: { width: meta.width, height: meta.height, channels: 3, background },
+  })
+    .composite([{ input: tintedMark }])
     .png({ compressionLevel: 9, palette: true })
     .toFile(outPath);
 
@@ -252,6 +273,44 @@ async function main() {
     opaque: true,
     fill: 0.82,
   });
+
+  /*
+   * Every asset is checked for actual artwork before the script reports
+   * success.
+   *
+   * Metadata is not enough. The email logo once shipped as a solid rectangle
+   * that reported the right dimensions and the right alpha, and looked fine in
+   * every check that did not involve looking at the pixels. Sampling for more
+   * than one distinct colour catches a blank output whatever caused it.
+   */
+  const blank = [];
+  for (const file of [
+    ...made.map(([name]) => join(brandDir, name)),
+    join(appDir, 'icon.png'),
+    join(appDir, 'icon1.png'),
+    join(appDir, 'apple-icon.png'),
+  ]) {
+    const { data, info } = await sharp(file).raw().toBuffer({ resolveWithObject: true });
+    const colours = new Set();
+
+    for (let y = 0; y < info.height; y += 4) {
+      for (let x = 0; x < info.width; x += 4) {
+        const i = (y * info.width + x) * info.channels;
+        colours.add(`${data[i]},${data[i + 1]},${data[i + 2]},${data[i + 3] ?? 255}`);
+        if (colours.size > 1) break;
+      }
+      if (colours.size > 1) break;
+    }
+
+    if (colours.size <= 1) blank.push(file);
+  }
+
+  if (blank.length > 0) {
+    console.error('\n  These assets contain a single flat colour — the artwork is missing:\n');
+    for (const file of blank) console.error(`    ${file}`);
+    console.error('');
+    process.exit(1);
+  }
 
   console.log('\n  Brand assets written:\n');
   for (const [name, meta] of made) {

@@ -31,8 +31,14 @@ export default async function HomePage() {
         for what ZHS publishes. So the three things are named in the first
         sentence, above the fold, before any product.
       */}
-      <section className="bg-paper pb-20 pt-16 md:pb-28 md:pt-24">
-        <div className="shell grid items-center gap-12 lg:grid-cols-[1.15fr_1fr]">
+      {/*
+        Vertical padding eases off again at lg rather than growing with the
+        viewport. A laptop is typically 800px tall, and 96px of padding at each
+        end of a hero that already contains a portrait book cover is what pushed
+        the call to action below the fold.
+      */}
+      <section className="bg-paper pb-20 pt-16 md:pb-24 md:pt-20 lg:pb-20 lg:pt-16">
+        <div className="shell grid items-center gap-12 lg:grid-cols-[1.2fr_0.85fr]">
           <div>
             <div className="rise">
               <Eyebrow>An independent press</Eyebrow>
@@ -63,8 +69,17 @@ export default async function HomePage() {
             <Link
               href={productHref(hero)}
               style={{ ...accentStyle(hero.accent), '--rise-delay': '200ms' } as React.CSSProperties}
-              className="rise group block"
+              className="rise group mx-auto block w-full max-w-[400px] lg:mx-0 lg:ml-auto"
             >
+              {/*
+                Capped width, because the height follows from it.
+
+                At 4:5 an uncapped column made the cover 679px tall — 85% of a
+                laptop viewport — so the artwork was sliced through by the fold
+                and read as a rendering fault rather than a crop. Constraining
+                the width bounds the height without distorting the cover or
+                cropping the title off it.
+              */}
               <div className="cover-frame relative aspect-[4/5] bg-accent-tint">
                 {hero.coverImage ? (
                   // The hero is the largest contentful paint; never lazy.
@@ -72,7 +87,7 @@ export default async function HomePage() {
                     src={hero.coverImage.url}
                     alt={hero.coverImage.alt}
                     fill
-                    sizes="(min-width: 1024px) 520px, 100vw"
+                    sizes="(min-width: 1024px) 400px, 100vw"
                     priority
                     className="object-cover"
                   />
