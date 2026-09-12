@@ -107,6 +107,19 @@ export class AdminController {
     return this.products.update(id, body, request.admin!);
   }
 
+  /* ---- Homepage hero --------------------------------------------------- */
+
+  /** Which product the homepage currently leads with. Derived, not stored. */
+  @Get('hero')
+  currentHero() {
+    return this.products.currentHero();
+  }
+
+  @Post('products/:id/hero')
+  makeHero(@Param('id', ParseIntPipe) id: number, @Req() request: AuthenticatedRequest) {
+    return this.products.makeHero(id, request.admin!);
+  }
+
   /* ---- Product images -------------------------------------------------- */
 
   @Post('products/:id/images')

@@ -145,6 +145,42 @@ export default function ProductEditPage({ params }: { params: Promise<{ id: stri
   const [loading, setLoading] = useState(!isNew);
   const [images, setImages] = useState<Array<{ id: number; url: string; alt: string; position: number }>>([]);
 
+  // The homepage hero, so the form can say which title is currently showing
+  // rather than leaving the rule to be inferred.
+  const [hero, setHero] = useState<{ id: number; title: string } | null>(null);
+  const [promoting, setPromoting] = useState(false);
+  const [heroMessage, setHeroMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isNew) return;
+    void fetch('/api/admin/admin/hero', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then(setHero)
+      .catch(() => undefined);
+  }, [isNew]);
+
+  const isHero = hero != null && !isNew && hero.id === Number(id);
+
+  async function promoteToHero() {
+    setPromoting(true);
+    setHeroMessage(null);
+
+    const response = await fetch(`/api/admin/admin/products/${id}/hero`, { method: 'POST' });
+    const payload = await response.json().catch(() => null);
+    setPromoting(false);
+
+    if (!response.ok) {
+      setHeroMessage(payload?.message ?? 'Could not set the hero.');
+      return;
+    }
+
+    setHero(payload);
+    // Promotion sets featured and moves the sort order, so the form must
+    // reflect that or the next save would write back the stale values.
+    setForm((prev) => ({ ...prev, featured: true, sortOrder: String(payload?.sortOrder ?? prev.sortOrder) }));
+    setHeroMessage('This title now leads the home page.');
+  }
+
   useEffect(() => {
     if (isNew) return;
 
@@ -550,8 +586,62 @@ export default function ProductEditPage({ params }: { params: Promise<{ id: stri
         <label className="flex items-center gap-3 text-small">
           <input type="checkbox" checked={form.featured}
             onChange={(e) => set('featured', e.target.checked)} />
-          <span>Feature on the home page</span>
+          <span>
+            Feature on the home page
+            <span className="ml-2 text-caption text-ink-muted">
+              shows in the featured row
+            </span>
+          </span>
         </label>
+
+        {/*
+          The hero is the featured title with the lowest sort order — that is
+          how the homepage already picks it. Rather than add a second flag that
+          would have to be true on exactly one row, this names the rule and
+          gives it a button.
+        */}
+        {!isNew ? (
+          <div className="border-t border-rule pt-6">
+            <h2 className="eyebrow">Homepage hero</h2>
+
+            {isHero ? (
+              <p className="mt-2 text-small">
+                This title is the homepage hero.
+                <span className="ml-2 text-caption text-ink-muted">
+                  It fills the top of the home page.
+                </span>
+              </p>
+            ) : (
+              <>
+                <p className="mt-2 text-small text-ink-muted">
+                  {hero
+                    ? `Currently showing “${hero.title}”.`
+                    : 'No title is showing — the home page has no hero.'}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => void promoteToHero()}
+                  disabled={promoting || form.status !== 'available'}
+                  className="mt-3 border border-ink px-4 py-2 font-ui text-small disabled:opacity-50"
+                >
+                  {promoting ? 'Setting…' : 'Make this the hero'}
+                </button>
+                {form.status !== 'available' ? (
+                  <p className="mt-2 text-caption text-ink-muted">
+                    Only an available title can be the hero — the home page leads with something
+                    that can be bought. Save this as Available first.
+                  </p>
+                ) : null}
+              </>
+            )}
+
+            {heroMessage ? (
+              <p role="status" className="mt-2 text-caption text-ink-muted">
+                {heroMessage}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
 
         {message ? (
           <p role="status" className={`text-small ${message === 'Saved.' ? 'text-moss' : 'text-danger'}`}>

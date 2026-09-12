@@ -1,5 +1,5 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { and, asc, count, desc, eq, like, or, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, like, or, sql, type SQL } from 'drizzle-orm';
 import { schema, type Database } from '@zhs/db';
 import { deriveTint, validateAccent, ACCENT_PALETTE } from '@zhs/ui';
 import type { UpsertProductInput } from '@zhs/shared';
@@ -194,6 +194,70 @@ export class AdminProductsService {
         .values(values)
         .onDuplicateKeyUpdate({ set: { ...values, productId: undefined } });
     }
+  }
+
+  /**
+   * Which product the homepage hero currently shows.
+   *
+   * Derived rather than stored. The homepage asks for featured products sorted
+   * by `sortOrder` and takes the first, so the hero is already decided by data
+   * that exists — adding an `isHero` column would mean a second source of
+   * truth for the same fact, and a boolean that must be true on exactly one row
+   * needs a transaction to maintain and still ends up with two or none.
+   */
+  async currentHero() {
+    const [hero] = await this.db.query.products.findMany({
+      where: and(eq(schema.products.featured, true), eq(schema.products.status, 'available')),
+      orderBy: [asc(schema.products.sortOrder), desc(schema.products.createdAt)],
+      limit: 1,
+      columns: { id: true, title: true, slug: true, sortOrder: true },
+    });
+
+    return hero ?? null;
+  }
+
+  /**
+   * Promotes a product to the homepage hero.
+   *
+   * Marks it featured and moves it in front of every other featured product,
+   * which is all "being the hero" means. One UPDATE, no exclusivity to
+   * maintain, and nothing else has to be touched.
+   *
+   * Sort order drifts downward as this is used. That is deliberate: the
+   * alternative — renumbering every other row to keep the values tidy — is
+   * several writes to make a number look nicer, and `sortOrder` is a signed
+   * int with room for a few billion promotions.
+   */
+  async makeHero(id: number, actor: AdminPrincipal) {
+    const product = await this.findOne(id);
+
+    if (product.status !== 'available') {
+      throw new BadRequestException({
+        message: 'Only an available title can be the homepage hero.',
+        errors: [
+          {
+            field: 'status',
+            message: `This title is "${product.status}". The homepage shows what can be bought.`,
+          },
+        ],
+      });
+    }
+
+    const [lowest] = await this.db
+      .select({ value: sql<number>`COALESCE(MIN(${schema.products.sortOrder}), 0)` })
+      .from(schema.products)
+      .where(eq(schema.products.featured, true));
+
+    await this.db
+      .update(schema.products)
+      .set({ featured: true, sortOrder: Number(lowest?.value ?? 0) - 1 })
+      .where(eq(schema.products.id, id));
+
+    await this.audit.record(actor, 'product.hero', 'product', String(id), {
+      hero: { from: false, to: true },
+    });
+
+    return this.currentHero();
   }
 
   async findOne(id: number) {
