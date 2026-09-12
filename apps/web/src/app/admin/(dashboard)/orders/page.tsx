@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { formatMoney } from '@zhs/shared';
+import { Modal } from '@/components/admin/modal';
+import { OrderDetailPanel } from '@/components/admin/order-detail';
 import { Eyebrow, HandDrawnRule } from '@/components/primitives';
 
 interface Order {
@@ -17,6 +19,7 @@ interface Order {
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [state, setState] = useState<'loading' | 'ready' | 'forbidden'>('loading');
+  const [openOrder, setOpenOrder] = useState<string | null>(null);
 
   async function load() {
     const response = await fetch('/api/admin/admin/orders', { cache: 'no-store' });
@@ -96,8 +99,24 @@ export default function AdminOrdersPage() {
             </thead>
             <tbody>
               {orders.map((order) => (
-                <tr key={order.orderNumber} className="border-b border-rule">
-                  <td className="py-3 pr-4 font-ui">{order.orderNumber}</td>
+                <tr key={order.orderNumber} className="border-b border-rule hover:bg-paper-deep">
+                  {/*
+                    The order number is a real <button>, not a click handler on
+                    the row. A row is not focusable or announced as actionable,
+                    so a keyboard user would have no way to open the detail —
+                    and putting the handler on the row would also swallow clicks
+                    meant for the fulfil action in the last cell.
+                  */}
+                  <td className="py-3 pr-4 font-ui">
+                    <button
+                      type="button"
+                      onClick={() => setOpenOrder(order.orderNumber)}
+                      className="link-underline text-left font-ui"
+                      aria-haspopup="dialog"
+                    >
+                      {order.orderNumber}
+                    </button>
+                  </td>
                   <td className="hidden py-3 pr-4 text-ink-muted sm:table-cell">{order.email}</td>
                   <td className="hidden py-3 pr-4 text-ink-muted sm:table-cell">
                     {order.items.reduce((sum, item) => sum + item.quantity, 0)}
@@ -121,6 +140,24 @@ export default function AdminOrdersPage() {
           </table>
         </div>
       )}
+
+      <Modal
+        open={openOrder !== null}
+        onClose={() => setOpenOrder(null)}
+        title={openOrder ? `Order ${openOrder}` : 'Order'}
+      >
+        {openOrder ? (
+          <OrderDetailPanel
+            orderNumber={openOrder}
+            onFulfilled={() => {
+              // Close first, then refresh: the list is what the admin returns
+              // to, and it must not still show the order as merely paid.
+              setOpenOrder(null);
+              void load();
+            }}
+          />
+        ) : null}
+      </Modal>
     </div>
   );
 }
