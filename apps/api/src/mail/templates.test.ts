@@ -413,15 +413,30 @@ describe('order receipt', () => {
 });
 
 describe('action links', () => {
-  it('repeats the link as readable text beside the button', () => {
+  it('shows the link once, in the button, not printed underneath', () => {
     const link = 'https://zhspress.org/newsletter/confirm?token=abc123';
     const mail = newsletterConfirmation({ confirmUrl: link });
 
-    // Once in the href, once as visible text — for clients that strip anchors
-    // and for recipients who want to read a link before clicking it.
-    const occurrences = mail.html.split(link).length - 1;
-    expect(occurrences).toBeGreaterThanOrEqual(2);
-    expect(mail.text).toContain(link);
+    /*
+     * The token is 64 characters in production, so a visible copy under the
+     * button wrapped across two lines of hex and was the ugliest thing in the
+     * message. Once, in the href, is enough.
+     */
+    expect(mail.html.split(link).length - 1).toBe(1);
+  });
+
+  it('still carries the full URL in the plain-text body', () => {
+    // Which is where a bare URL belongs, and covers the client that renders
+    // no HTML at all.
+    const link = 'https://zhspress.org/newsletter/confirm?token=abc123';
+    expect(newsletterConfirmation({ confirmUrl: link }).text).toContain(link);
+  });
+
+  it('keeps every template to a single visible action link', () => {
+    for (const [name, mail] of ALL) {
+      const bare = mail.html.match(/>https?:\/\/[^<\s]+</g) ?? [];
+      expect(bare, `${name} prints a bare URL as text`).toHaveLength(0);
+    }
   });
 });
 

@@ -1,21 +1,30 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { and, count, desc, eq, isNull, sql } from 'drizzle-orm';
 import { schema, type Database } from '@zhs/db';
 import { DB } from '../db/db.module';
+import { AuditService } from './audit.service';
 import { toCsv } from './csv';
+import type { AdminPrincipal } from '../auth/auth.service';
 
 /**
  * Who is waiting to hear from the press.
  *
  * Both tables were being written to and read by nobody: people could join a
- * waitlist or subscribe, and there was no way to see that they had. These are
- * read-only views — nothing here edits or deletes, because the one destructive
- * thing that matters (unsubscribing) must stay in the subscriber's hands
- * through the link in their email, not an admin's.
+ * waitlist or subscribe, and there was no way to see that they had.
+ *
+ * Almost entirely reads. The one write is `deleteSubscriber`, and the
+ * distinction it turns on is worth stating: *unsubscribing* is the
+ * subscriber's own act, through the link in their email, and leaves the row
+ * behind — while *deleting* erases the record, which is what a request to be
+ * removed actually asks for. An admin cannot do the first and should be able
+ * to do the second.
  */
 @Injectable()
 export class AudienceService {
-  constructor(@Inject(DB) private readonly db: Database) {}
+  constructor(
+    @Inject(DB) private readonly db: Database,
+    private readonly audit: AuditService,
+  ) {}
 
   /* ---- Waitlist -------------------------------------------------------- */
 
@@ -126,6 +135,41 @@ export class AudienceService {
       ['email', 'source', 'confirmed'],
       rows.map((row) => [row.email, row.source ?? '', row.confirmedAt?.toISOString() ?? '']),
     );
+  }
+
+  /**
+   * Erases a subscriber outright.
+   *
+   * A hard delete, not a status change, because the two mean different things
+   * and only one of them is this method's job:
+   *
+   * - **Unsubscribing** keeps the row and marks it `unsubscribed`. That is the
+   *   subscriber's own act, through the link in their email, and the row has to
+   *   survive so a later signup does not silently re-add someone who opted out.
+   * - **Deleting** removes the record. That is what a "please remove my data"
+   *   request means, and a soft delete would not satisfy it.
+   *
+   * The audit entry records the id and nothing else. Writing the email address
+   * into an audit log at the moment someone asks to be erased would defeat the
+   * erasure — the address would simply live on in a different table.
+   */
+  async deleteSubscriber(id: number, actor: AdminPrincipal) {
+    const existing = await this.db.query.newsletterSubscribers.findFirst({
+      where: eq(schema.newsletterSubscribers.id, id),
+      columns: { id: true, status: true },
+    });
+
+    if (!existing) throw new NotFoundException('That subscriber no longer exists.');
+
+    await this.db
+      .delete(schema.newsletterSubscribers)
+      .where(eq(schema.newsletterSubscribers.id, id));
+
+    await this.audit.record(actor, 'subscriber.delete', 'subscriber', String(id), {
+      status: { from: existing.status, to: null },
+    });
+
+    return { ok: true as const };
   }
 
   /** Titles with people still waiting — surfaced on the dashboard. */

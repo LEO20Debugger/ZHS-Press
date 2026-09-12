@@ -226,20 +226,17 @@ function button(href: string, label: string): string {
 }
 
 /*
- * Every template repeats its action link as visible text below the button.
+ * There is deliberately no visible copy of the action link in the HTML.
  *
- * Not redundancy. A plain-text-only client shows no button at all, some
- * gateways rewrite or strip anchors, and a recipient who does not trust a
- * button in an email — reasonably, given what phishing looks like — can read
- * the destination before clicking. It costs one line.
+ * An earlier version printed one under every button, reasoning that a client
+ * which strips anchors would leave the recipient stranded. In practice the
+ * confirmation token is 64 characters, so the result was two wrapped lines of
+ * hex under a perfectly good button — the ugliest thing in the message, shown
+ * to everyone, to serve a case that is now rare.
+ *
+ * The plain-text alternative still carries every URL in full, which covers the
+ * client that renders no HTML at all. That is where a bare URL belongs.
  */
-function fallbackLink(href: string): string {
-  return muted(
-    `Or paste this into your browser:<br><span style="color:${INK_MUTED};word-break:break-all;">${esc(
-      href,
-    )}</span>`,
-  );
-}
 
 // ---------------------------------------------------------------------------
 // Newsletter
@@ -255,7 +252,6 @@ export function newsletterConfirmation({ confirmUrl }: { confirmUrl: string }): 
             'not often, and never anything else.',
         ) +
         button(confirmUrl, 'Confirm subscription') +
-        fallbackLink(confirmUrl) +
         muted('If you did not ask for this, ignore it and nothing happens.'),
       { preheader: 'Confirm your subscription to hear about new books and issues.' },
     ),
@@ -444,7 +440,6 @@ ${totalRow('Total paid', order.totalCents, true)}
 </table>` +
         shipping +
         `<div style="margin-top:28px;">${button(orderUrl, 'View your order')}</div>` +
-        fallbackLink(orderUrl) +
         muted('Questions about this order? Reply to this email and we will pick it up.'),
       {
         preheader: `Order ${order.orderNumber} — ${money(order.totalCents, order.currency)} paid.`,
@@ -505,7 +500,6 @@ export function orderShipped({
             'Post being post, give it a little time.',
         ) +
         button(orderUrl, 'View your order') +
-        fallbackLink(orderUrl) +
         muted('Anything wrong when it arrives? Reply to this email.'),
       { preheader: `Order ${orderNumber} has shipped.` },
     ),
@@ -654,7 +648,6 @@ export function waitlistRelease({
           `You asked us to let you know when <em>${esc(title)}</em> was available. It is.`,
         ) +
         button(productUrl, 'Have a look') +
-        fallbackLink(productUrl) +
         muted(
           'You are getting this because you asked to be notified about this one title. ' +
             'It is the only email we will send you about it.',

@@ -163,15 +163,31 @@ export class MailService {
      * better outcome, and in development it is the only one that works.
      */
     const webBaseUrl = this.config.get('WEB_BASE_URL', { infer: true });
-    const usableLogoHost =
+    const publicWebHost =
       webBaseUrl.startsWith('https://') && !/localhost|127\.0\.0\.1/.test(webBaseUrl);
-    configureBrand(usableLogoHost ? webBaseUrl : null);
+    configureBrand(publicWebHost ? webBaseUrl : null);
 
-    if (!usableLogoHost) {
-      this.logger.log(
-        `Email logo disabled — WEB_BASE_URL (${webBaseUrl}) is not a public https ` +
-          'address, so messages use the text wordmark.',
-      );
+    if (!publicWebHost) {
+      /*
+       * This is far more serious than the missing logo, which is why it is an
+       * error in production rather than a note.
+       *
+       * WEB_BASE_URL builds every link in every message — the newsletter
+       * confirmation, the unsubscribe, the "view your order". If it points at
+       * localhost, those links are dead for every recipient, and nothing
+       * downstream notices: the send succeeds, the customer is told to check
+       * their inbox, and the link they receive goes nowhere.
+       *
+       * Locally this is expected and harmless, so it stays a warning there.
+       */
+      const message =
+        `WEB_BASE_URL is "${webBaseUrl}", which is not a public https address. ` +
+        'Every link in every email — confirm, unsubscribe, view order — will point ' +
+        'there and be unusable for recipients. The logo falls back to the text ' +
+        'wordmark for the same reason.';
+
+      if (isProduction) this.logger.error(message);
+      else this.logger.warn(message);
     }
 
     const http = this.httpTransport();

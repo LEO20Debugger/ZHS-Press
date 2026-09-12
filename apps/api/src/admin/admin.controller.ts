@@ -209,6 +209,21 @@ export class AdminController {
     return this.audience.subscriberSummary();
   }
 
+  /**
+   * Erases a subscriber. Irreversible, and admin-only like everything here.
+   *
+   * This is what answers a "please remove my data" request — unsubscribing is
+   * the subscriber's own act through their email link, and leaves the row.
+   */
+  @Delete('subscribers/:id')
+  @Roles('admin')
+  deleteSubscriber(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return this.audience.deleteSubscriber(id, request.admin!);
+  }
+
   @Get('subscribers.csv')
   @Roles('admin')
   @Header('content-type', 'text/csv; charset=utf-8')

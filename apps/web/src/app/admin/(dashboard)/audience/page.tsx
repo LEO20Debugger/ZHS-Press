@@ -51,6 +51,32 @@ export default function AudiencePage() {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>('confirmed');
+  const [confirmingDelete, setConfirmingDelete] = useState<number | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  async function removeSubscriber(id: number) {
+    setDeleting(true);
+    setDeleteError(null);
+
+    const response = await fetch(`/api/admin/admin/subscribers/${id}`, { method: 'DELETE' });
+    setDeleting(false);
+    setConfirmingDelete(null);
+
+    if (!response.ok) {
+      const payload = await response.json().catch(() => null);
+      setDeleteError(payload?.message ?? 'Could not delete that subscriber.');
+      return;
+    }
+
+    // Drop it locally rather than refetching the list, so the row disappears
+    // immediately — then refresh the counts, which have changed.
+    setSubscribers((prev) => prev.filter((subscriber) => subscriber.id !== id));
+    void fetch('/api/admin/admin/subscribers/summary', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => data && setSummary(data))
+      .catch(() => undefined);
+  }
 
   const load = useCallback(async () => {
     const responses = await Promise.all([
@@ -299,7 +325,10 @@ export default function AudiencePage() {
                     Source
                   </th>
                   <th scope="col" className="py-3 pr-4 font-ui font-medium">Joined</th>
-                  <th scope="col" className="py-3 font-ui font-medium">Confirmed</th>
+                  <th scope="col" className="py-3 pr-4 font-ui font-medium">Confirmed</th>
+                  <th scope="col" className="py-3 text-right font-ui font-medium">
+                    <span className="sr-only">Actions</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -312,8 +341,45 @@ export default function AudiencePage() {
                     <td className="whitespace-nowrap py-3 pr-4 text-ink-muted">
                       {when(subscriber.createdAt)}
                     </td>
-                    <td className="whitespace-nowrap py-3 text-ink-muted">
+                    <td className="whitespace-nowrap py-3 pr-4 text-ink-muted">
                       {when(subscriber.confirmedAt)}
+                    </td>
+                    <td className="py-3 text-right">
+                      {/*
+                        Two steps, because this cannot be undone and the row
+                        above it is someone else's. An inline confirm rather
+                        than window.confirm: a native dialog is unstyleable,
+                        reads as a browser warning rather than part of the
+                        admin, and behaves inconsistently on mobile.
+                      */}
+                      {confirmingDelete === subscriber.id ? (
+                        <span className="flex items-center justify-end gap-3 whitespace-nowrap">
+                          <button
+                            type="button"
+                            onClick={() => void removeSubscriber(subscriber.id)}
+                            disabled={deleting}
+                            className="link-underline text-caption text-danger disabled:opacity-50"
+                          >
+                            {deleting ? 'Deleting…' : 'Yes, delete'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setConfirmingDelete(null)}
+                            className="link-underline text-caption text-ink-muted"
+                          >
+                            Cancel
+                          </button>
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setConfirmingDelete(subscriber.id)}
+                          aria-label={`Delete ${subscriber.email}`}
+                          className="link-underline text-caption text-ink-muted hover:text-danger"
+                        >
+                          Delete
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -321,9 +387,22 @@ export default function AudiencePage() {
             </table>
           </div>
 
+          {deleteError ? (
+            <p role="alert" className="mt-3 text-caption text-danger">
+              {deleteError}
+            </p>
+          ) : null}
+
           {subscribers.length === 0 ? (
             <p className="mt-4 text-small text-ink-muted">Nobody with that status yet.</p>
           ) : null}
+
+          <p className="mt-6 max-w-2xl text-caption text-ink-muted">
+            Deleting erases the record entirely — use it for test entries, spam, or a request to
+            be removed. It is not the same as unsubscribing, which the subscriber does from the
+            link in their email and which keeps the row so a later signup cannot quietly re-add
+            someone who opted out.
+          </p>
         </div>
       ) : null}
     </div>
