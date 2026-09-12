@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { formatMoney } from '@zhs/shared';
+import { IconView } from '@/components/admin/icons';
 import { Modal } from '@/components/admin/modal';
 import { OrderDetailPanel } from '@/components/admin/order-detail';
 import { Eyebrow, HandDrawnRule } from '@/components/primitives';
@@ -94,7 +95,16 @@ export default function AdminOrdersPage() {
                 <th scope="col" className="py-3 pr-4 font-ui font-medium">
                   Status
                 </th>
-                <th scope="col" className="py-3 font-ui font-medium" />
+                {/*
+                  Not an empty <th>: a header cell with no content leaves the
+                  column unnamed, and a screen reader announcing a cell in it
+                  reads the row with a blank where the column name should be.
+                  The label is visually hidden because the actions speak for
+                  themselves on screen.
+                */}
+                <th scope="col" className="py-3 text-right font-ui font-medium">
+                  <span className="sr-only">Actions</span>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -124,15 +134,34 @@ export default function AdminOrdersPage() {
                   <td className="py-3 pr-4">{formatMoney(order.totalCents, 'USD')}</td>
                   <td className="py-3 pr-4">{order.status}</td>
                   <td className="py-3">
-                    {order.status === 'paid' ? (
+                    <div className="flex items-center justify-end gap-4">
+                      {order.status === 'paid' ? (
+                        <button
+                          type="button"
+                          onClick={() => void fulfil(order.orderNumber)}
+                          className="link-underline text-caption"
+                        >
+                          Mark fulfilled
+                        </button>
+                      ) : null}
+
+                      {/*
+                        The icon stands alone, so the accessible name lives on
+                        the button — and names the order rather than saying
+                        "View". A column of identical "View" buttons tells a
+                        screen-reader user nothing about which one they are on.
+                      */}
                       <button
                         type="button"
-                        onClick={() => void fulfil(order.orderNumber)}
-                        className="link-underline text-caption"
+                        onClick={() => setOpenOrder(order.orderNumber)}
+                        aria-haspopup="dialog"
+                        aria-label={`View order ${order.orderNumber}`}
+                        title="View order"
+                        className="p-1 text-ink-muted transition-colors hover:text-ink focus-visible:text-ink"
                       >
-                        Mark fulfilled
+                        <IconView size={18} />
                       </button>
-                    ) : null}
+                    </div>
                   </td>
                 </tr>
               ))}

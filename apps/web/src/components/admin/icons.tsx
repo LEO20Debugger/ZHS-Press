@@ -137,3 +137,20 @@ export function IconSignOut(props: IconProps) {
     </Svg>
   );
 }
+
+/**
+ * View: an eye, for opening a record without leaving the list.
+ *
+ * Unlike the navigation glyphs above, this one stands alone in a table cell
+ * with no visible label — so the *button* wrapping it must carry the name, and
+ * that name should say which row it opens. "View" repeated down a column tells
+ * a screen-reader user nothing about which order they are about to open.
+ */
+export function IconView(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12Z" />
+      <circle cx="12" cy="12" r="2.5" />
+    </Svg>
+  );
+}

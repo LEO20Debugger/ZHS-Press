@@ -162,9 +162,13 @@ export function AdminShell({ children }: { children: ReactNode }) {
           </nav>
 
           <div className="hidden items-center gap-4 text-caption text-ink-muted md:flex">
-            <span>
-              {user.name} · <span className="uppercase tracking-wide">{user.role}</span>
-            </span>
+            {/*
+              The role, not the account name. Which permissions you are working
+              under is the thing that changes what this interface will let you
+              do; the name only repeats what whoever is signed in already knows,
+              and at desktop it was the widest thing in a crowded bar.
+            */}
+            <span className="uppercase tracking-wide">{user.role}</span>
             <Link href="/" className="link-underline flex items-center gap-1.5">
               <IconExternal size={14} />
               View site
