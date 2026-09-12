@@ -4,6 +4,7 @@ import { use, useEffect, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { formatMoney, parseMoneyToCents, upsertProductSchema } from '@zhs/shared';
 import { AccentPicker } from '@/components/admin/accent-picker';
+import { ProductContributors } from '@/components/admin/product-contributors';
 import { ProductImages } from '@/components/admin/product-images';
 import { Button, Eyebrow, HandDrawnRule } from '@/components/primitives';
 
@@ -524,6 +525,18 @@ export default function ProductEditPage({ params }: { params: Promise<{ id: stri
             Save the product first, then add its cover.
           </p>
         )}
+
+        {/*
+          Credits, and only once the product exists — they are attached by id
+          through their own endpoints rather than carried in the form payload,
+          the same way images are.
+
+          Shown for every type, not only magazines: a picture book has an
+          illustrator, and a journal has a cover artist. The single-name fields
+          in the detail sections above are the quick path; this is where a
+          title with several named people is built up.
+        */}
+        {!isNew ? <ProductContributors productId={Number(id)} /> : null}
 
         <div className="border-t border-rule pt-6">
           <AccentPicker value={form.accentHex} onChange={(hex) => set('accentHex', hex)} />

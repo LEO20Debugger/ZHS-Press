@@ -154,3 +154,14 @@ export function IconView(props: IconProps) {
     </Svg>
   );
 }
+
+/** Pages: a document with lines of copy on it. */
+export function IconPages(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M6 3h8l4 4v14H6z" />
+      <path d="M14 3v4h4" />
+      <path d="M9 12h6M9 16h6" />
+    </Svg>
+  );
+}

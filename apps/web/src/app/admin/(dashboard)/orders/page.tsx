@@ -79,9 +79,10 @@ export default function AdminOrdersPage() {
                 </th>
                 {/*
                   Email and the item count drop out below sm. An email address
-                  is the widest thing in this table and the least useful for
-                  the one job done from a phone — seeing what is paid and
-                  marking it fulfilled. Both return at sm.
+                  is the widest thing in this table and the least useful for the
+                  job done from a phone — seeing what is paid, and opening an
+                  order to act on it. Both return at sm, and everything dropped
+                  here is in the order modal anyway.
                 */}
                 <th scope="col" className="hidden py-3 pr-4 font-ui font-medium sm:table-cell">
                   Email
@@ -121,7 +122,7 @@ export default function AdminOrdersPage() {
                     <button
                       type="button"
                       onClick={() => setOpenOrder(order.orderNumber)}
-                      className="link-underline text-left font-ui"
+                      className="link-underline whitespace-nowrap text-left font-ui"
                       aria-haspopup="dialog"
                     >
                       {order.orderNumber}
@@ -135,11 +136,17 @@ export default function AdminOrdersPage() {
                   <td className="py-3 pr-4">{order.status}</td>
                   <td className="py-3">
                     <div className="flex items-center justify-end gap-4">
+                      {/*
+                        Hidden below sm, where it wrapped onto two lines and
+                        crowded the icon beside it. Nothing is lost: the modal
+                        the icon opens carries the same action, so fulfilling
+                        from a phone is one extra tap rather than unavailable.
+                      */}
                       {order.status === 'paid' ? (
                         <button
                           type="button"
                           onClick={() => void fulfil(order.orderNumber)}
-                          className="link-underline text-caption"
+                          className="link-underline hidden whitespace-nowrap text-caption sm:inline"
                         >
                           Mark fulfilled
                         </button>

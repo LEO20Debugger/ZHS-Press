@@ -23,8 +23,13 @@ import { Inject } from '@nestjs/common';
 import { schema, type Database } from '@zhs/db';
 import {
   addProductImageSchema,
+  attachContributorSchema,
+  upsertPageSchema,
   upsertProductSchema,
   type AddProductImageInput,
+  type AttachContributorInput,
+  type ContributorRole,
+  type UpsertPageInput,
   type UpsertProductInput,
 } from '@zhs/shared';
 import { ConfigService } from '@nestjs/config';
@@ -36,6 +41,8 @@ import { ZodValidationPipe } from '../common/zod-validation.pipe';
 import { AdminGuard, Roles, type AuthenticatedRequest } from '../auth/admin.guard';
 import { AdminProductsService } from './admin-products.service';
 import { AuditService } from './audit.service';
+import { ContributorsService } from './contributors.service';
+import { PagesService } from './pages.service';
 import { ParityService } from './parity.service';
 import { StorageService } from '../storage/storage.service';
 
@@ -56,6 +63,8 @@ export class AdminController {
     private readonly parity: ParityService,
     private readonly audit: AuditService,
     private readonly storage: StorageService,
+    private readonly contributors: ContributorsService,
+    private readonly pages: PagesService,
     private readonly mail: MailService,
     private readonly config: ConfigService<Env, true>,
   ) {}
@@ -148,6 +157,72 @@ export class AdminController {
       { url: stored.url, alt: alt.trim(), width: stored.width, height: stored.height },
       request.admin!,
     );
+  }
+
+  /* ---- Editorial pages -------------------------------------------------- */
+
+  @Get('pages')
+  listPages() {
+    return this.pages.list();
+  }
+
+  @Get('pages/:slug')
+  getPage(@Param('slug') slug: string) {
+    return this.pages.findBySlug(slug);
+  }
+
+  @Put('pages')
+  upsertPage(
+    @Body(new ZodValidationPipe(upsertPageSchema)) body: UpsertPageInput,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return this.pages.upsert(body, request.admin!);
+  }
+
+  /* ---- Contributors ---------------------------------------------------- */
+
+  /** Type-ahead for the picker. Editors may manage credits, so no @Roles. */
+  @Get('contributors')
+  searchContributors(@Query('search') search?: string) {
+    return this.contributors.search(search);
+  }
+
+  @Get('contributors/all')
+  listContributors() {
+    return this.contributors.list();
+  }
+
+  @Get('products/:id/contributors')
+  productContributors(@Param('id', ParseIntPipe) id: number) {
+    return this.contributors.listForProduct(id);
+  }
+
+  @Post('products/:id/contributors')
+  attachContributor(
+    @Param('id', ParseIntPipe) id: number,
+    @Body(new ZodValidationPipe(attachContributorSchema)) body: AttachContributorInput,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return this.contributors.attach(id, body, request.admin!);
+  }
+
+  @Delete('products/:id/contributors/:contributorId/:role')
+  detachContributor(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('contributorId', ParseIntPipe) contributorId: number,
+    @Param('role') role: string,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return this.contributors.detach(id, contributorId, role as ContributorRole, request.admin!);
+  }
+
+  @Patch('products/:id/contributors/order')
+  reorderContributors(
+    @Param('id', ParseIntPipe) id: number,
+    @Body('contributorIds') contributorIds: number[],
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return this.contributors.reorder(id, contributorIds, request.admin!);
   }
 
   @Delete('products/:id/images/:imageId')

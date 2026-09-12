@@ -11,6 +11,7 @@ import {
   IconMenu,
   IconOrders,
   IconOverview,
+  IconPages,
   IconParity,
   IconSignOut,
   IconSubmissions,
@@ -33,6 +34,7 @@ const NAV = [
     adminOnly: false,
     Icon: IconSubmissions,
   },
+  { href: '/admin/pages', label: 'Pages', adminOnly: false, Icon: IconPages },
   { href: '/admin/parity', label: 'Amazon parity', adminOnly: false, Icon: IconParity },
   { href: '/admin/orders', label: 'Orders', adminOnly: true, Icon: IconOrders },
 ] as const;

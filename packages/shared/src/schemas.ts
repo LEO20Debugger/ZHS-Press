@@ -244,6 +244,39 @@ export type UpsertProductInput = z.infer<typeof upsertProductSchema>;
  * required rather than optional — an image with no alt text is invisible to a
  * screen reader, and the storefront relies on it always being present.
  */
+export const contributorRoleSchema = z.enum(['author', 'illustrator', 'editor', 'contributor']);
+
+/**
+ * Attaching a contributor to a product.
+ *
+ * A contributor is a *person*, not a line on one product — the same writer
+ * recurs across issues of Light, and the storefront links a name to everything
+ * they have appeared in. So this takes either an existing `contributorId` or a
+ * `name` to create one from, never both, and the service resolves which.
+ *
+ * `pieceTitle` is the title of their piece *within this issue*, which is why it
+ * lives on the join rather than on the person.
+ */
+export const attachContributorSchema = z
+  .object({
+    contributorId: z.number().int().positive().optional(),
+    name: z.string().trim().min(1).max(255).optional(),
+    role: contributorRoleSchema.default('contributor'),
+    pieceTitle: z
+      .string()
+      .trim()
+      .max(255)
+      .optional()
+      .transform((value) => (value === '' ? undefined : value)),
+  })
+  .refine((input) => Boolean(input.contributorId) !== Boolean(input.name), {
+    message: 'Choose an existing contributor or give a new name, not both',
+    path: ['name'],
+  });
+
+export type AttachContributorInput = z.infer<typeof attachContributorSchema>;
+export type ContributorRole = z.infer<typeof contributorRoleSchema>;
+
 export const addProductImageSchema = z.object({
   url: z
     .string()
@@ -258,3 +291,36 @@ export const addProductImageSchema = z.object({
   position: z.number().int().min(0).optional(),
 });
 export type AddProductImageInput = z.infer<typeof addProductImageSchema>;
+
+/**
+ * Creating or updating an editorial page.
+ *
+ * `body` is Markdown, not MDX, despite the column being named `body_mdx` —
+ * see packages/shared/src/markdown.ts for why that distinction matters. The
+ * column keeps its name because renaming it is a migration for no behavioural
+ * gain.
+ *
+ * `publishedAt` is a nullable timestamp rather than a boolean: an unpublished
+ * page falls back to whatever the route ships, so copy can be drafted without
+ * replacing what visitors currently see.
+ */
+export const upsertPageSchema = z.object({
+  slug: slugSchema,
+  title: z.string().trim().min(1).max(255),
+  body: z.string().max(100_000),
+  seoTitle: z
+    .string()
+    .trim()
+    .max(255)
+    .optional()
+    .transform((value) => (value === '' ? undefined : value)),
+  seoDescription: z
+    .string()
+    .trim()
+    .max(320)
+    .optional()
+    .transform((value) => (value === '' ? undefined : value)),
+  published: z.boolean().default(false),
+});
+
+export type UpsertPageInput = z.infer<typeof upsertPageSchema>;

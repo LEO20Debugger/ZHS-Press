@@ -1,12 +1,19 @@
 import type { Metadata } from 'next';
 import { Eyebrow, HandDrawnRule, Section } from '@/components/primitives';
+import { renderMarkdown } from '@zhs/shared';
 import { SubmissionForm } from '@/components/submission-form';
+import { getEditorialPage } from '@/lib/pages';
 
-export const metadata: Metadata = {
-  title: 'Submissions',
-  description:
-    'ZHS Press accepts manuscripts and author pitches for fiction, non-fiction, children’s books and literary work.',
-};
+const FALLBACK_DESCRIPTION =
+  'ZHS Press accepts manuscripts and author pitches for fiction, non-fiction, children’s books and literary work.';
+
+export async function generateMetadata(): Promise<Metadata> {
+  const page = await getEditorialPage('submissions');
+  return {
+    title: page?.seoTitle ?? page?.title ?? 'Submissions',
+    description: page?.seoDescription ?? FALLBACK_DESCRIPTION,
+  };
+}
 
 /**
  * Brief 2.5. A clean one-pager is explicitly sufficient at launch — what
@@ -16,7 +23,9 @@ export const metadata: Metadata = {
  * Associate; the sections are marked below so it is obvious what is still
  * placeholder rather than approved copy.
  */
-export default function SubmissionsPage() {
+export default async function SubmissionsPage() {
+  const page = await getEditorialPage('submissions');
+
   return (
     <>
       <div className="shell py-16 md:py-24">
@@ -43,11 +52,22 @@ export default function SubmissionsPage() {
           </div>
           <div>
             <h2 className="font-display text-h1">Rates and selection</h2>
-            {/* PLACEHOLDER — awaiting approved copy from the Publishing Associate. */}
-            <p className="prose-editorial mt-5 text-ink-muted">
-              Details of our rates and how we select work will be published here shortly. In the
-              meantime, send your pitch and we will reply with terms if we would like to read more.
-            </p>
+            {/*
+              Published copy replaces this. renderMarkdown escapes before it
+              formats, so nothing typed in the admin can introduce markup.
+            */}
+            {page ? (
+              <div
+                className="prose-editorial mt-5 text-ink-muted"
+                dangerouslySetInnerHTML={{ __html: renderMarkdown(page.body) }}
+              />
+            ) : (
+              <p className="prose-editorial mt-5 text-ink-muted">
+                Details of our rates and how we select work will be published here shortly. In the
+                meantime, send your pitch and we will reply with terms if we would like to read
+                more.
+              </p>
+            )}
           </div>
         </div>
       </Section>
