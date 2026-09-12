@@ -25,6 +25,41 @@ interface FormState {
   accentHex: string;
   featured: boolean;
   sortOrder: string;
+
+  /*
+   * Type-specific detail, held flat and as strings like every other field here.
+   *
+   * All three sets stay in state regardless of the selected type, so switching
+   * type to look at the other fields and switching back does not wipe what was
+   * already typed. Only the set matching the type is sent.
+   */
+  authorName: string;
+  illustratorName: string;
+  isbn: string;
+  bookPageCount: string;
+  format: string;
+  ageRange: string;
+
+  issueNumber: string;
+  theme: string;
+  editorNote: string;
+  publishedDate: string;
+
+  dimensions: string;
+  material: string;
+  stationeryPageCount: string;
+  coverArtist: string;
+}
+
+/** Blank string to undefined, so clearing a field clears the column. */
+function text(value: string): string | undefined {
+  return value.trim() || undefined;
+}
+
+/** Blank to undefined, otherwise a number for Zod to validate. */
+function count(value: string): number | undefined {
+  const trimmed = value.trim();
+  return trimmed === '' ? undefined : Number(trimmed);
 }
 
 const EMPTY: FormState = {
@@ -41,6 +76,23 @@ const EMPTY: FormState = {
   accentHex: '#b13f2f',
   featured: false,
   sortOrder: '0',
+
+  authorName: '',
+  illustratorName: '',
+  isbn: '',
+  bookPageCount: '',
+  format: '',
+  ageRange: '',
+
+  issueNumber: '',
+  theme: '',
+  editorNote: '',
+  publishedDate: '',
+
+  dimensions: '',
+  material: '',
+  stationeryPageCount: '',
+  coverArtist: '',
 };
 
 function Field({
@@ -115,6 +167,25 @@ export default function ProductEditPage({ params }: { params: Promise<{ id: stri
           accentHex: p.accentHex ?? '#b13f2f',
           featured: Boolean(p.featured),
           sortOrder: String(p.sortOrder ?? 0),
+
+          // findOne already joins these; they were simply never read.
+          authorName: p.book?.authorName ?? '',
+          illustratorName: p.book?.illustratorName ?? '',
+          isbn: p.book?.isbn ?? '',
+          bookPageCount: p.book?.pageCount == null ? '' : String(p.book.pageCount),
+          format: p.book?.format ?? '',
+          ageRange: p.book?.ageRange ?? '',
+
+          issueNumber: p.issue?.issueNumber == null ? '' : String(p.issue.issueNumber),
+          theme: p.issue?.theme ?? '',
+          editorNote: p.issue?.editorNote ?? '',
+          publishedDate: p.issue?.publishedDate ?? '',
+
+          dimensions: p.stationery?.dimensions ?? '',
+          material: p.stationery?.material ?? '',
+          stationeryPageCount:
+            p.stationery?.pageCount == null ? '' : String(p.stationery.pageCount),
+          coverArtist: p.stationery?.coverArtist ?? '',
         });
       })
       .finally(() => setLoading(false));
@@ -148,6 +219,45 @@ export default function ProductEditPage({ params }: { params: Promise<{ id: stri
       accentHex: form.accentHex || undefined,
       featured: form.featured,
       sortOrder: Number(form.sortOrder) || 0,
+
+      /*
+       * Only the block matching the type is sent. Sending all three would have
+       * the service delete the two that do not apply anyway, but it would also
+       * push a half-typed magazine issue number through validation for a
+       * product that is now a book.
+       */
+      ...(form.type === 'book'
+        ? {
+            book: {
+              authorName: text(form.authorName),
+              illustratorName: text(form.illustratorName),
+              isbn: text(form.isbn),
+              pageCount: count(form.bookPageCount),
+              format: text(form.format),
+              ageRange: text(form.ageRange),
+            },
+          }
+        : {}),
+      ...(form.type === 'magazine'
+        ? {
+            issue: {
+              issueNumber: count(form.issueNumber),
+              theme: text(form.theme),
+              editorNote: text(form.editorNote),
+              publishedDate: form.publishedDate || undefined,
+            },
+          }
+        : {}),
+      ...(form.type === 'stationery'
+        ? {
+            stationery: {
+              dimensions: text(form.dimensions),
+              material: text(form.material),
+              pageCount: count(form.stationeryPageCount),
+              coverArtist: text(form.coverArtist),
+            },
+          }
+        : {}),
     };
 
     // Same schema the API validates with, so the rules cannot diverge.
@@ -266,6 +376,127 @@ export default function ProductEditPage({ params }: { params: Promise<{ id: stri
               onChange={(e) => set('amazonUrl', e.target.value)} className={FIELD} />
           </Field>
         </div>
+
+        {/*
+          Type-specific detail.
+
+          Only the block matching the selected type is rendered, because the
+          three sets have nothing in common — an ISBN means nothing on a
+          journal, and an issue number means nothing on a picture book. State
+          for the other two is retained, so switching type to look and switching
+          back does not lose anything already typed.
+        */}
+        {form.type === 'book' ? (
+          <fieldset className="border-t border-rule pt-6">
+            <legend className="eyebrow">Book details</legend>
+
+            <div className="mt-4 grid gap-6 sm:grid-cols-2">
+              <Field
+                label="Author"
+                id="authorName"
+                hint="Required before this can leave draft"
+                error={errors['book.authorName']}
+              >
+                <input id="authorName" value={form.authorName}
+                  onChange={(e) => set('authorName', e.target.value)} className={FIELD} />
+              </Field>
+
+              <Field label="Illustrator" id="illustratorName" error={errors['book.illustratorName']}>
+                <input id="illustratorName" value={form.illustratorName}
+                  onChange={(e) => set('illustratorName', e.target.value)} className={FIELD} />
+              </Field>
+            </div>
+
+            <div className="mt-6 grid gap-6 sm:grid-cols-3">
+              <Field label="ISBN" id="isbn" error={errors['book.isbn']}>
+                <input id="isbn" value={form.isbn}
+                  onChange={(e) => set('isbn', e.target.value)} className={FIELD} />
+              </Field>
+
+              <Field label="Pages" id="bookPageCount" error={errors['book.pageCount']}>
+                <input id="bookPageCount" inputMode="numeric" value={form.bookPageCount}
+                  onChange={(e) => set('bookPageCount', e.target.value)} className={FIELD} />
+              </Field>
+
+              <Field label="Age range" id="ageRange" hint="e.g. 3–7 years" error={errors['book.ageRange']}>
+                <input id="ageRange" value={form.ageRange}
+                  onChange={(e) => set('ageRange', e.target.value)} className={FIELD} />
+              </Field>
+            </div>
+
+            <div className="mt-6">
+              <Field label="Format" id="format" hint="e.g. Hardback, 240×240mm" error={errors['book.format']}>
+                <input id="format" value={form.format}
+                  onChange={(e) => set('format', e.target.value)} className={FIELD} />
+              </Field>
+            </div>
+          </fieldset>
+        ) : null}
+
+        {form.type === 'magazine' ? (
+          <fieldset className="border-t border-rule pt-6">
+            <legend className="eyebrow">Issue details</legend>
+
+            <div className="mt-4 grid gap-6 sm:grid-cols-3">
+              <Field
+                label="Issue number"
+                id="issueNumber"
+                hint="Required before this can leave draft"
+                error={errors['issue.issueNumber']}
+              >
+                <input id="issueNumber" inputMode="numeric" value={form.issueNumber}
+                  onChange={(e) => set('issueNumber', e.target.value)} className={FIELD} />
+              </Field>
+
+              <Field label="Theme" id="theme" error={errors['issue.theme']}>
+                <input id="theme" value={form.theme}
+                  onChange={(e) => set('theme', e.target.value)} className={FIELD} />
+              </Field>
+
+              <Field label="Published" id="publishedDate" error={errors['issue.publishedDate']}>
+                <input id="publishedDate" type="date" value={form.publishedDate}
+                  onChange={(e) => set('publishedDate', e.target.value)} className={FIELD} />
+              </Field>
+            </div>
+
+            <div className="mt-6">
+              <Field label="Editor's note" id="editorNote" hint="MDX" error={errors['issue.editorNote']}>
+                <textarea id="editorNote" rows={5} value={form.editorNote}
+                  onChange={(e) => set('editorNote', e.target.value)} className={FIELD} />
+              </Field>
+            </div>
+          </fieldset>
+        ) : null}
+
+        {form.type === 'stationery' ? (
+          <fieldset className="border-t border-rule pt-6">
+            <legend className="eyebrow">Stationery details</legend>
+
+            <div className="mt-4 grid gap-6 sm:grid-cols-2">
+              <Field label="Dimensions" id="dimensions" hint="e.g. A5, 148×210mm" error={errors['stationery.dimensions']}>
+                <input id="dimensions" value={form.dimensions}
+                  onChange={(e) => set('dimensions', e.target.value)} className={FIELD} />
+              </Field>
+
+              <Field label="Material" id="material" error={errors['stationery.material']}>
+                <input id="material" value={form.material}
+                  onChange={(e) => set('material', e.target.value)} className={FIELD} />
+              </Field>
+            </div>
+
+            <div className="mt-6 grid gap-6 sm:grid-cols-2">
+              <Field label="Pages" id="stationeryPageCount" error={errors['stationery.pageCount']}>
+                <input id="stationeryPageCount" inputMode="numeric" value={form.stationeryPageCount}
+                  onChange={(e) => set('stationeryPageCount', e.target.value)} className={FIELD} />
+              </Field>
+
+              <Field label="Cover artist" id="coverArtist" error={errors['stationery.coverArtist']}>
+                <input id="coverArtist" value={form.coverArtist}
+                  onChange={(e) => set('coverArtist', e.target.value)} className={FIELD} />
+              </Field>
+            </div>
+          </fieldset>
+        ) : null}
 
         <Field label="Blurb" id="blurb" hint="Short listing copy" error={errors.blurb}>
           <textarea id="blurb" rows={3} value={form.blurb}

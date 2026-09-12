@@ -74,6 +74,19 @@ const CROPS = {
   darkLockup: { left: 4179, top: 0, width: 3202, height: 2250 },
   lightMark: { left: 0, top: 1212, width: 3202, height: 1500 },
   lightLockup: { left: 0, top: 1212, width: 3202, height: 2256 },
+
+  /*
+   * The mark trimmed to its ink, for icons only.
+   *
+   * `darkMark` carries roughly 4% of whitespace on each side and 6% below —
+   * harmless in a header, where surrounding layout supplies the spacing, and
+   * wasteful in a 16px favicon where every pixel of glyph counts. Trimming it
+   * buys about 8% of width back before any scaling decision is made.
+   *
+   * The web assets deliberately keep their padding: a logo butted hard against
+   * a flex container's edge looks wrong.
+   */
+  iconMark: { left: 4319, top: 0, width: 2921, height: 1404 },
 };
 
 /**
@@ -229,11 +242,15 @@ async function main() {
    * Next's App Router emits a <link> for each of icon.png / icon1.png with the
    * right `sizes`, and the browser chooses.
    */
-  await icon(CROPS.darkMark, 512, INK, PAPER, join(appDir, 'icon.png'), { fill: 0.96 });
-  await icon(CROPS.darkMark, 32, INK, PAPER, join(appDir, 'icon1.png'), { fill: 0.96 });
-  await icon(CROPS.darkMark, 180, INK, PAPER, join(appDir, 'apple-icon.png'), {
+  // Full width for the favicons. Browsers do not mask or round a favicon, so
+  // there is nothing for a margin to protect against — it only costs glyph.
+  await icon(CROPS.iconMark, 512, INK, PAPER, join(appDir, 'icon.png'), { fill: 1 });
+  await icon(CROPS.iconMark, 32, INK, PAPER, join(appDir, 'icon1.png'), { fill: 1 });
+
+  // iOS *does* mask and round, so this one keeps a margin.
+  await icon(CROPS.iconMark, 180, INK, PAPER, join(appDir, 'apple-icon.png'), {
     opaque: true,
-    fill: 0.78,
+    fill: 0.82,
   });
 
   console.log('\n  Brand assets written:\n');

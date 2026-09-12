@@ -136,6 +136,54 @@ export const adminLoginSchema = z.object({
 });
 export type AdminLoginInput = z.infer<typeof adminLoginSchema>;
 
+/**
+ * Type-specific detail, stored in a satellite table per product type.
+ *
+ * Every field here is optional at the schema level, including the two the
+ * database marks NOT NULL (`authorName`, `issueNumber`). That is deliberate:
+ * the admin form saves whatever has been filled in so far, and a book whose
+ * author has not been typed yet must still be savable as a draft. The service
+ * decides whether there is enough to write a row at all — see
+ * `AdminProductsService.upsertDetails`.
+ *
+ * Anything blank is normalised to undefined, so an emptied field clears the
+ * column rather than storing "".
+ */
+const optionalText = (max: number) =>
+  z
+    .string()
+    .trim()
+    .max(max)
+    .optional()
+    .transform((value) => (value === '' ? undefined : value));
+
+export const bookDetailsSchema = z.object({
+  authorName: optionalText(255),
+  illustratorName: optionalText(255),
+  isbn: optionalText(20),
+  pageCount: z.number().int().positive().max(10_000).optional(),
+  format: optionalText(60),
+  ageRange: optionalText(40),
+});
+
+export const magazineIssueSchema = z.object({
+  issueNumber: z.number().int().positive().max(10_000).optional(),
+  theme: optionalText(255),
+  editorNote: z.string().max(50_000).optional(),
+  publishedDate: z.string().date().optional(),
+});
+
+export const stationeryDetailsSchema = z.object({
+  dimensions: optionalText(120),
+  material: optionalText(160),
+  pageCount: z.number().int().positive().max(10_000).optional(),
+  coverArtist: optionalText(255),
+});
+
+export type BookDetailsInput = z.infer<typeof bookDetailsSchema>;
+export type MagazineIssueInput = z.infer<typeof magazineIssueSchema>;
+export type StationeryDetailsInput = z.infer<typeof stationeryDetailsSchema>;
+
 export const upsertProductSchema = z
   .object({
     slug: slugSchema,
@@ -154,6 +202,12 @@ export const upsertProductSchema = z
     sortOrder: z.number().int().default(0),
     seoTitle: z.string().trim().max(255).optional(),
     seoDescription: z.string().trim().max(320).optional(),
+
+    // Only the block matching `type` is read; the others are ignored, so the
+    // form can keep all three mounted and switch which is visible.
+    book: bookDetailsSchema.optional(),
+    issue: magazineIssueSchema.optional(),
+    stationery: stationeryDetailsSchema.optional(),
   })
   .refine((p) => p.compareAtCents == null || p.compareAtCents > p.priceCents, {
     message: 'The compare-at price must be higher than the actual price',
@@ -162,6 +216,23 @@ export const upsertProductSchema = z
   .refine((p) => p.status !== 'coming_soon' || p.releaseDate != null, {
     message: 'A "coming soon" title needs a release date to show a waitlist against',
     path: ['releaseDate'],
+  })
+  /*
+   * `book_details.author_name` and `magazine_issues.issue_number` are NOT NULL
+   * in the database, but a half-filled draft has to be savable — so the
+   * requirement is enforced at the moment it starts to matter: when the title
+   * stops being a draft and becomes something the storefront will render.
+   *
+   * Without this the failure surfaces as a database constraint error on save,
+   * which tells an editor nothing about which field to fill in.
+   */
+  .refine((p) => p.type !== 'book' || p.status === 'draft' || Boolean(p.book?.authorName), {
+    message: 'A book needs an author before it can leave draft',
+    path: ['book', 'authorName'],
+  })
+  .refine((p) => p.type !== 'magazine' || p.status === 'draft' || p.issue?.issueNumber != null, {
+    message: 'An issue needs an issue number before it can leave draft',
+    path: ['issue', 'issueNumber'],
   });
 export type UpsertProductInput = z.infer<typeof upsertProductSchema>;
 

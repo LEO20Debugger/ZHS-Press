@@ -98,6 +98,104 @@ export class AdminProductsService {
     return { items, page, perPage, total, totalPages: Math.max(1, Math.ceil(total / perPage)) };
   }
 
+  /**
+   * Writes the type-specific detail row for a product.
+   *
+   * Three things this has to get right, none of them obvious:
+   *
+   * **The type can change.** A product saved as a book and later switched to
+   * stationery would otherwise keep its `book_details` row forever — invisible
+   * in the admin, still joined by the public API, and resurfacing if the type
+   * is ever switched back. Rows for every non-matching type are deleted first.
+   *
+   * **A draft may be incomplete.** `author_name` and `issue_number` are NOT
+   * NULL, so a row simply cannot exist until those are filled in. Rather than
+   * failing the save, nothing is written until there is enough to write — the
+   * schema refuses to let such a title leave draft, which is the point at which
+   * the omission actually matters.
+   *
+   * **Upsert, not insert.** `product_id` is the primary key of each satellite
+   * table, so a second save of the same product must update rather than
+   * collide.
+   */
+  private async upsertDetails(productId: number, input: UpsertProductInput): Promise<void> {
+    const satellites = [
+      { type: 'book', table: schema.bookDetails },
+      { type: 'magazine', table: schema.magazineIssues },
+      { type: 'stationery', table: schema.stationeryDetails },
+    ] as const;
+
+    for (const { type, table } of satellites) {
+      if (type !== input.type) {
+        await this.db.delete(table).where(eq(table.productId, productId));
+      }
+    }
+
+    if (input.type === 'book') {
+      // No author yet: a draft in progress. Leave the table alone.
+      if (!input.book?.authorName) return;
+
+      const values = {
+        productId,
+        authorName: input.book.authorName,
+        illustratorName: input.book.illustratorName ?? null,
+        isbn: input.book.isbn ?? null,
+        pageCount: input.book.pageCount ?? null,
+        format: input.book.format ?? null,
+        ageRange: input.book.ageRange ?? null,
+      };
+      await this.db
+        .insert(schema.bookDetails)
+        .values(values)
+        .onDuplicateKeyUpdate({ set: { ...values, productId: undefined } });
+      return;
+    }
+
+    if (input.type === 'magazine') {
+      if (input.issue?.issueNumber == null) return;
+
+      const values = {
+        productId,
+        issueNumber: input.issue.issueNumber,
+        theme: input.issue.theme ?? null,
+        editorNote: input.issue.editorNote ?? null,
+        publishedDate: input.issue.publishedDate ?? null,
+      };
+      await this.db
+        .insert(schema.magazineIssues)
+        .values(values)
+        .onDuplicateKeyUpdate({ set: { ...values, productId: undefined } });
+      return;
+    }
+
+    if (input.type === 'stationery') {
+      const details = input.stationery;
+      const hasAnything =
+        details &&
+        (details.dimensions || details.material || details.coverArtist || details.pageCount != null);
+
+      // Nothing filled in: drop the row rather than storing a set of nulls.
+      if (!hasAnything) {
+        await this.db
+          .delete(schema.stationeryDetails)
+          .where(eq(schema.stationeryDetails.productId, productId));
+        return;
+      }
+
+      const values = {
+        productId,
+        dimensions: details.dimensions ?? null,
+        material: details.material ?? null,
+        pageCount: details.pageCount ?? null,
+        coverArtist: details.coverArtist ?? null,
+      };
+      await this.db
+        .insert(schema.stationeryDetails)
+        .values(values)
+        .onDuplicateKeyUpdate({ set: { ...values, productId: undefined } });
+    }
+  }
+
   async findOne(id: number) {
     const product = await this.db.query.products.findFirst({
       where: eq(schema.products.id, id),
@@ -148,6 +246,7 @@ export class AdminProductsService {
 
     const id = Number((inserted as unknown as { insertId: number }).insertId);
 
+    await this.upsertDetails(id, input);
     await this.db.insert(schema.inventory).values({ productId: id, quantity: 0 });
     await this.audit.record(actor, 'product.create', 'product', String(id), {
       title: { from: null, to: input.title },
@@ -194,6 +293,8 @@ export class AdminProductsService {
     if (before.slug !== input.slug) {
       changes.slug = { from: before.slug, to: input.slug };
     }
+
+    await this.upsertDetails(id, input);
 
     await this.audit.record(actor, 'product.update', 'product', String(id), changes);
 
