@@ -8,8 +8,8 @@ import { DB } from '../db/db.module';
 /**
  * Amazon parity (brief s3 and s5).
  *
- * A full SP-API integration is disproportionate — Trust manages the Amazon
- * account by hand. What actually helps is a list of what is out of sync and a
+ * A full SP-API integration is disproportionate — the Amazon account is
+ * managed by hand. What actually helps is a list of what is out of sync and a
  * CSV to reconcile against, so this reports rather than automates.
  */
 @Injectable()
@@ -41,7 +41,7 @@ export class ParityService {
     };
   }
 
-  /** CSV for Trust to reconcile against the Amazon backend. */
+  /** CSV to reconcile against the Amazon backend by hand. */
   async csv(): Promise<string> {
     const products = await this.publicProducts();
 

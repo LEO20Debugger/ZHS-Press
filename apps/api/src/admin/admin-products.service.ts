@@ -381,7 +381,7 @@ export class AdminProductsService {
    *
    * A product referenced by past order items must not vanish — the storefront
    * stops showing it, but the record survives. Per the brief, removals are
-   * signed off by the Publishing Associate, and archiving keeps that reversible.
+   * signed off by the press before removal, and archiving keeps that reversible.
    */
   async archive(id: number, actor: AdminPrincipal) {
     await this.findOne(id);

@@ -9,7 +9,7 @@ import type { ProductDetail, ProductSummary } from '@zhs/shared';
  * with it unset the app talks to the real API and a failure surfaces as a
  * failure rather than silently falling back to invented products.
  *
- * Copy here is placeholder and must be replaced by the Publishing Associate
+ * Copy here is placeholder and must be replaced with approved wording
  * before launch. Prices are the ones currently listed on Amazon where known.
  */
 

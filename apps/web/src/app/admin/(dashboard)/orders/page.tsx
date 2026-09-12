@@ -52,7 +52,7 @@ export default function AdminOrdersPage() {
         <h1 className="mt-3 font-display text-display">Not available to your account.</h1>
         <HandDrawnRule className="mt-4 max-w-[180px] text-terracotta" />
         <p className="prose-editorial mt-6 text-ink-muted">
-          Orders and customer details are restricted to admin accounts. Ask the Press Director if
+          Orders and customer details are restricted to admin accounts. Ask an administrator if
           you need access.
         </p>
       </div>

@@ -43,7 +43,7 @@ export default function SubmissionsPage() {
           </div>
           <div>
             <h2 className="font-display text-h1">Rates and selection</h2>
-            {/* PLACEHOLDER — awaiting approved copy from the Publishing Associate. */}
+            {/* PLACEHOLDER — awaiting approved copy from the press. */}
             <p className="prose-editorial mt-5 text-ink-muted">
               Details of our rates and how we select work will be published here shortly. In the
               meantime, send your pitch and we will reply with terms if we would like to read more.

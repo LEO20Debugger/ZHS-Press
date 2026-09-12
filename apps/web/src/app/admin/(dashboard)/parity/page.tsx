@@ -14,7 +14,7 @@ interface Report {
 /**
  * Amazon parity (brief s3, s5).
  *
- * Reports rather than automates: Trust manages the Amazon account by hand, so
+ * Reports rather than automates: the Amazon account is managed by hand, so
  * what helps is a list of what is out of sync and a CSV to reconcile against.
  */
 export default function AdminParityPage() {

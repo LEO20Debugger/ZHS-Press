@@ -9,7 +9,7 @@
  * will theme itself in a colour its cover no longer contains. Every value here
  * carries its paired foreground at WCAG AA.
  *
- * Copy is placeholder pending the Publishing Associate.
+ * Copy is placeholder pending approved wording.
  */
 
 export interface CatalogueEntry {

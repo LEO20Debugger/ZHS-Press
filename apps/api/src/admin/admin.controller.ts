@@ -49,7 +49,7 @@ import { StorageService } from '../storage/storage.service';
  *
  * Every route requires an authenticated admin user. Routes that touch money or
  * customer data additionally carry @Roles('admin'), so an `editor` account —
- * the Publishing Associate's — can manage the catalogue but cannot read orders
+ * an editorial one — can manage the catalogue but cannot read orders
  * or customer addresses.
  */
 @Controller('admin')

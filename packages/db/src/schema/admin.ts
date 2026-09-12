@@ -16,7 +16,7 @@ import {
  *
  * `editor` covers content: products, pages, images, contributors.
  * `admin` additionally covers orders, refunds, shipping rates and user
- * management. The Publishing Associate is an editor.
+ * management. Editorial staff hold the editor role.
  */
 export const adminRole = ['admin', 'editor'] as const;
 

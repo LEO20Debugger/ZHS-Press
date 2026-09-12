@@ -17,7 +17,7 @@ export const ROLES_KEY = 'roles';
  *
  * `editor` covers content — products, pages, images, contributors.
  * `admin` additionally covers orders, refunds, shipping rates and user
- * management. The Publishing Associate is an editor, so anything touching money
+ * management. Editorial staff hold the editor role, so anything touching money
  * must carry @Roles('admin').
  */
 export const Roles = (...roles: AdminRole[]) => SetMetadata(ROLES_KEY, roles);

@@ -14,8 +14,8 @@ import * as schema from './schema/index';
  * re-run safely without silently changing someone's credentials.
  *
  *   pnpm db:admin                              # reset the default admin
- *   pnpm db:admin faith@zhspress.org           # a specific account
- *   pnpm db:admin faith@zhspress.org editor    # create as an editor
+ *   pnpm db:admin editor@zhspress.org          # a specific account
+ *   pnpm db:admin editor@zhspress.org editor   # create as an editor
  *
  * Set ADMIN_PASSWORD to choose the password; otherwise one is generated and
  * printed once.

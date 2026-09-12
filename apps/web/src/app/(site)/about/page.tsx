@@ -16,7 +16,7 @@ export default function AboutPage() {
         </h1>
         <HandDrawnRule className="mt-6 max-w-[240px] text-terracotta" />
 
-        {/* PLACEHOLDER COPY — to be supplied by the Publishing Associate. */}
+        {/* PLACEHOLDER COPY — to be supplied by the press. */}
         <div className="prose-editorial mt-8">
           <p>
             ZHS Press is an independent publisher working across three things: picture books for
