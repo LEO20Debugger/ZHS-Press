@@ -1,6 +1,7 @@
 'use client';
 
 import { use, useEffect, useState, type FormEvent } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { formatMoney, parseMoneyToCents, upsertProductSchema } from '@zhs/shared';
 import { AccentPicker } from '@/components/admin/accent-picker';
@@ -346,6 +347,26 @@ export default function ProductEditPage({ params }: { params: Promise<{ id: stri
 
   return (
     <div className="max-w-3xl">
+      {/*
+        The only admin page reached from a list rather than from the nav, so
+        the only one that needs a way back.
+
+        A Link to the catalogue rather than router.back(): history could hold
+        anything — a bookmark, a refresh, the page before signing in — and a
+        back control that sometimes leaves the admin entirely is worse than
+        none. This always lands where the product came from.
+
+        It sits above the heading and is a full-height tap target, because on a
+        phone the nav is behind the menu button and this is the quick way out.
+      */}
+      <Link
+        href="/admin/products"
+        className="link-underline inline-flex items-center gap-1.5 py-1 text-caption text-ink-muted hover:text-ink"
+      >
+        <span aria-hidden="true">&larr;</span>
+        Back to catalogue
+      </Link>
+
       <Eyebrow>Catalogue</Eyebrow>
       <h1 className="mt-3 font-display text-display">
         {isNew ? 'New product' : form.title || 'Edit product'}

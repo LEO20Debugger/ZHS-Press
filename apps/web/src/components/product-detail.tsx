@@ -87,7 +87,16 @@ export function ProductDetailView({ product }: { product: ProductDetail }) {
       */}
       <div className="bg-accent-tint pb-16 pt-12 md:pb-24 md:pt-16">
         <div className="shell grid gap-12 md:grid-cols-2 md:gap-16">
-          <div className="cover-frame rise group relative mx-auto w-full max-w-md bg-paper-raised">
+          {/*
+            Narrower than it was. At max-w-md the cover rendered 600px tall —
+            three quarters of a laptop viewport — which is a lot even on the
+            page where the cover is the point, and it left the short text
+            column floating beside a full-height slab.
+
+            Matched to the homepage hero's cap so a cover is a consistent size
+            wherever it is shown large.
+          */}
+          <div className="cover-frame rise group relative mx-auto w-full max-w-[400px] bg-paper-raised">
             {cover ? (
               // The largest contentful paint on this page: priority, never lazy.
               <Image
@@ -95,7 +104,7 @@ export function ProductDetailView({ product }: { product: ProductDetail }) {
                 alt={cover.alt}
                 width={cover.width ?? 896}
                 height={cover.height ?? 1200}
-                sizes="(min-width: 768px) 448px, 100vw"
+                sizes="(min-width: 768px) 400px, 100vw"
                 priority
                 className="h-full w-full object-cover"
               />
