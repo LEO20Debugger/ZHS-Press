@@ -122,13 +122,23 @@ async function tinted(rawCrop, width, colour, outPath, { background = null } = {
 /**
  * A square icon.
  *
- * The mark is 2.14:1, so it needs padding rather than stretching to become a
- * favicon. `flatten` is applied for the Apple touch icon because iOS composites
- * transparent icons onto black, which would put the ink on near-black.
+ * The mark is 2.14:1, so it is padded rather than stretched — but *how much*
+ * padding matters far more than it looks, because the mark is scaled to `fill`
+ * of the square's **width** and its height then follows the aspect ratio.
+ * At fill 0.76 the glyph ends up only 33% as tall as the square, which is
+ * roughly 5px in a 16px browser tab: technically present, practically a smudge.
+ *
+ * A 2.14:1 mark can never exceed about 47% of a square's height, so the only
+ * lever is using the full width. The favicon therefore fills almost edge to
+ * edge, while the Apple touch icon keeps its padding: iOS rounds the corners
+ * and applies its own mask, so a full-bleed glyph gets clipped there.
+ *
+ * `flatten` is applied for the Apple icon because iOS composites transparent
+ * icons onto black, which would put the ink on near-black.
  */
-async function icon(rawCrop, size, colour, background, outPath, { opaque = false } = {}) {
+async function icon(rawCrop, size, colour, background, outPath, { opaque = false, fill = 0.76 } = {}) {
   const crop = await clamp(rawCrop);
-  const inner = Math.round(size * 0.76);
+  const inner = Math.round(size * fill);
   const height = Math.round((inner * crop.height) / crop.width);
 
   const alpha = await sharp(SOURCE)
@@ -206,15 +216,32 @@ async function main() {
     }),
   ]);
 
-  // Next's App Router picks these up by filename and emits the <link> tags.
-  await icon(CROPS.darkMark, 512, INK, PAPER, join(appDir, 'icon.png'));
-  await icon(CROPS.darkMark, 180, INK, PAPER, join(appDir, 'apple-icon.png'), { opaque: true });
+  /*
+   * Two favicons, not one, and the small one is the point.
+   *
+   * With only the 512px file, a browser drawing a 16px tab icon downscales by
+   * 32:1 through a generic filter, and the box outline — a hairline at that
+   * scale — turns to grey mush. Offering a 32px asset lets it pick that
+   * instead and halve once, which is visibly crisper on a standard-density
+   * screen. The 512px file still serves high-DPI tabs, bookmarks and the
+   * address bar.
+   *
+   * Next's App Router emits a <link> for each of icon.png / icon1.png with the
+   * right `sizes`, and the browser chooses.
+   */
+  await icon(CROPS.darkMark, 512, INK, PAPER, join(appDir, 'icon.png'), { fill: 0.96 });
+  await icon(CROPS.darkMark, 32, INK, PAPER, join(appDir, 'icon1.png'), { fill: 0.96 });
+  await icon(CROPS.darkMark, 180, INK, PAPER, join(appDir, 'apple-icon.png'), {
+    opaque: true,
+    fill: 0.78,
+  });
 
   console.log('\n  Brand assets written:\n');
   for (const [name, meta] of made) {
     console.log(`    apps/web/public/brand/${name.padEnd(24)} ${meta.width}x${meta.height}`);
   }
   console.log(`    apps/web/src/app/icon.png${' '.repeat(16)} 512x512 (transparent)`);
+  console.log(`    apps/web/src/app/icon1.png${' '.repeat(15)} 32x32 (crisp tab size)`);
   console.log(`    apps/web/src/app/apple-icon.png${' '.repeat(10)} 180x180 (on --paper)\n`);
 }
 
