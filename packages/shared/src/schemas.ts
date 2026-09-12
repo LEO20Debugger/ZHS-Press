@@ -291,36 +291,3 @@ export const addProductImageSchema = z.object({
   position: z.number().int().min(0).optional(),
 });
 export type AddProductImageInput = z.infer<typeof addProductImageSchema>;
-
-/**
- * Creating or updating an editorial page.
- *
- * `body` is Markdown, not MDX, despite the column being named `body_mdx` —
- * see packages/shared/src/markdown.ts for why that distinction matters. The
- * column keeps its name because renaming it is a migration for no behavioural
- * gain.
- *
- * `publishedAt` is a nullable timestamp rather than a boolean: an unpublished
- * page falls back to whatever the route ships, so copy can be drafted without
- * replacing what visitors currently see.
- */
-export const upsertPageSchema = z.object({
-  slug: slugSchema,
-  title: z.string().trim().min(1).max(255),
-  body: z.string().max(100_000),
-  seoTitle: z
-    .string()
-    .trim()
-    .max(255)
-    .optional()
-    .transform((value) => (value === '' ? undefined : value)),
-  seoDescription: z
-    .string()
-    .trim()
-    .max(320)
-    .optional()
-    .transform((value) => (value === '' ? undefined : value)),
-  published: z.boolean().default(false),
-});
-
-export type UpsertPageInput = z.infer<typeof upsertPageSchema>;

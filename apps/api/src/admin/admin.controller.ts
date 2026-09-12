@@ -24,12 +24,10 @@ import { schema, type Database } from '@zhs/db';
 import {
   addProductImageSchema,
   attachContributorSchema,
-  upsertPageSchema,
   upsertProductSchema,
   type AddProductImageInput,
   type AttachContributorInput,
   type ContributorRole,
-  type UpsertPageInput,
   type UpsertProductInput,
 } from '@zhs/shared';
 import { ConfigService } from '@nestjs/config';
@@ -40,9 +38,9 @@ import { orderShipped, url } from '../mail/templates';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
 import { AdminGuard, Roles, type AuthenticatedRequest } from '../auth/admin.guard';
 import { AdminProductsService } from './admin-products.service';
+import { AudienceService } from './audience.service';
 import { AuditService } from './audit.service';
 import { ContributorsService } from './contributors.service';
-import { PagesService } from './pages.service';
 import { ParityService } from './parity.service';
 import { StorageService } from '../storage/storage.service';
 
@@ -64,7 +62,7 @@ export class AdminController {
     private readonly audit: AuditService,
     private readonly storage: StorageService,
     private readonly contributors: ContributorsService,
-    private readonly pages: PagesService,
+    private readonly audience: AudienceService,
     private readonly mail: MailService,
     private readonly config: ConfigService<Env, true>,
   ) {}
@@ -159,24 +157,51 @@ export class AdminController {
     );
   }
 
-  /* ---- Editorial pages -------------------------------------------------- */
+  /* ---- Audience: waitlist and subscribers --------------------------------
+   *
+   * @Roles('admin') on every one. These are email addresses belonging to
+   * members of the public — the same reason orders are restricted. An editor
+   * manages the catalogue; they have no need of the mailing list.
+   */
 
-  @Get('pages')
-  listPages() {
-    return this.pages.list();
+  @Get('waitlist')
+  @Roles('admin')
+  waitlistSummary() {
+    return this.audience.waitlistSummary();
   }
 
-  @Get('pages/:slug')
-  getPage(@Param('slug') slug: string) {
-    return this.pages.findBySlug(slug);
+  @Get('waitlist/entries')
+  @Roles('admin')
+  waitlistEntries(@Query('productId') productId?: string) {
+    return this.audience.waitlistEntries(productId ? Number(productId) : undefined);
   }
 
-  @Put('pages')
-  upsertPage(
-    @Body(new ZodValidationPipe(upsertPageSchema)) body: UpsertPageInput,
-    @Req() request: AuthenticatedRequest,
-  ) {
-    return this.pages.upsert(body, request.admin!);
+  @Get('waitlist.csv')
+  @Roles('admin')
+  @Header('content-type', 'text/csv; charset=utf-8')
+  @Header('content-disposition', 'attachment; filename=zhs-waitlist.csv')
+  waitlistCsv(@Query('productId') productId?: string) {
+    return this.audience.waitlistCsv(productId ? Number(productId) : undefined);
+  }
+
+  @Get('subscribers')
+  @Roles('admin')
+  subscribers(@Query('status') status?: string) {
+    return this.audience.subscribers(status);
+  }
+
+  @Get('subscribers/summary')
+  @Roles('admin')
+  subscriberSummary() {
+    return this.audience.subscriberSummary();
+  }
+
+  @Get('subscribers.csv')
+  @Roles('admin')
+  @Header('content-type', 'text/csv; charset=utf-8')
+  @Header('content-disposition', 'attachment; filename=zhs-subscribers.csv')
+  subscriberCsv() {
+    return this.audience.subscriberCsv();
   }
 
   /* ---- Contributors ---------------------------------------------------- */

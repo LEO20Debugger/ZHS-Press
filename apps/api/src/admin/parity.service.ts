@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { inArray } from 'drizzle-orm';
 import { schema, type Database } from '@zhs/db';
 import { formatMoney } from '@zhs/shared';
+import { toCsv } from './csv';
 import { DB } from '../db/db.module';
 
 /**
@@ -44,16 +45,9 @@ export class ParityService {
   async csv(): Promise<string> {
     const products = await this.publicProducts();
 
-    const escape = (value: unknown): string => {
-      const text = value == null ? '' : String(value);
-      // RFC 4180: quote anything containing a comma, quote or newline, and
-      // double any embedded quotes. Book titles contain commas constantly.
-      return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
-    };
-
-    const header = ['slug', 'title', 'type', 'status', 'price_usd', 'isbn', 'amazon_url'];
-    const rows = products.map((p) =>
-      [
+    return toCsv(
+      ['slug', 'title', 'type', 'status', 'price_usd', 'isbn', 'amazon_url'],
+      products.map((p) => [
         p.slug,
         p.title,
         p.type,
@@ -61,11 +55,7 @@ export class ParityService {
         formatMoney(p.priceCents, 'USD'),
         p.book?.isbn ?? '',
         p.amazonUrl ?? '',
-      ]
-        .map(escape)
-        .join(','),
+      ]),
     );
-
-    return [header.join(','), ...rows].join('\r\n');
   }
 }

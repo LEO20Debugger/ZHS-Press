@@ -1,52 +1,22 @@
 import type { Metadata } from 'next';
-import { renderMarkdown } from '@zhs/shared';
 import { Eyebrow, HandDrawnRule, Section } from '@/components/primitives';
-import { getEditorialPage } from '@/lib/pages';
 
-const FALLBACK_DESCRIPTION =
-  'ZHS Press is an independent press publishing books, Light magazine, and stationery.';
+export const metadata: Metadata = {
+  title: 'About',
+  description: 'ZHS Press is an independent press publishing books, Light magazine, and stationery.',
+};
 
-/**
- * Metadata follows the published page when there is one.
- *
- * generateMetadata rather than a static export, because the title and
- * description are now editable — leaving them static would mean the tab title
- * and the search snippet quietly disagreed with the copy on the page.
- */
-export async function generateMetadata(): Promise<Metadata> {
-  const page = await getEditorialPage('about');
-  return {
-    title: page?.seoTitle ?? page?.title ?? 'About',
-    description: page?.seoDescription ?? FALLBACK_DESCRIPTION,
-  };
-}
-
-export default async function AboutPage() {
-  const page = await getEditorialPage('about');
-
+export default function AboutPage() {
   return (
     <>
       <div className="shell py-16 md:py-24">
         <Eyebrow>About</Eyebrow>
         <h1 className="mt-4 max-w-3xl text-display">
-          {page?.title ?? 'A small press, making things worth keeping.'}
+          A small press, making things worth keeping.
         </h1>
         <HandDrawnRule className="mt-6 max-w-[240px] text-terracotta" />
 
-        {/*
-          Published copy wins; otherwise the wording below ships as written.
-
-          The HTML comes from renderMarkdown, which escapes its input before
-          applying any formatting and can only emit a fixed set of tags — so
-          nothing an editor types can introduce markup here. See
-          packages/shared/src/markdown.ts.
-        */}
-        {page ? (
-          <div
-            className="prose-editorial mt-8"
-            dangerouslySetInnerHTML={{ __html: renderMarkdown(page.body) }}
-          />
-        ) : (
+        {/* PLACEHOLDER COPY — to be supplied by the Publishing Associate. */}
         <div className="prose-editorial mt-8">
           <p>
             ZHS Press is an independent publisher working across three things: picture books for
@@ -59,7 +29,6 @@ export default async function AboutPage() {
             hands. That is the whole reason to run a press this size.
           </p>
         </div>
-        )}
       </div>
 
       <Section tone="deep">

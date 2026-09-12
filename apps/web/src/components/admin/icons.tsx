@@ -155,13 +155,14 @@ export function IconView(props: IconProps) {
   );
 }
 
-/** Pages: a document with lines of copy on it. */
-export function IconPages(props: IconProps) {
+/** Audience: people, for the waitlist and subscriber lists. */
+export function IconAudience(props: IconProps) {
   return (
     <Svg {...props}>
-      <path d="M6 3h8l4 4v14H6z" />
-      <path d="M14 3v4h4" />
-      <path d="M9 12h6M9 16h6" />
+      <path d="M16 20v-1.5a3.5 3.5 0 0 0-3.5-3.5h-5A3.5 3.5 0 0 0 4 18.5V20" />
+      <circle cx="10" cy="8" r="3.2" />
+      <path d="M20 20v-1.5a3.5 3.5 0 0 0-2.6-3.4" />
+      <path d="M15.5 5.2a3.2 3.2 0 0 1 0 5.6" />
     </Svg>
   );
 }

@@ -6,7 +6,6 @@ import { AuthModule } from './auth/auth.module';
 import { CaptureModule } from './capture/capture.module';
 import { CartModule } from './cart/cart.module';
 import { CheckoutModule } from './checkout/checkout.module';
-import { ContentModule } from './content/content.module';
 import { DbModule } from './db/db.module';
 import { HealthController } from './health/health.controller';
 import { MailModule } from './mail/mail.module';
@@ -30,7 +29,6 @@ import { StorageModule } from './storage/storage.module';
     CheckoutModule,
     AuthModule,
     AdminModule,
-    ContentModule,
     StorageModule,
   ],
   controllers: [HealthController],

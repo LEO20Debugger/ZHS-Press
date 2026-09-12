@@ -5,13 +5,13 @@ import { LogoMark } from '../logo-mark';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
 import {
+  IconAudience,
   IconCatalogue,
   IconClose,
   IconExternal,
   IconMenu,
   IconOrders,
   IconOverview,
-  IconPages,
   IconParity,
   IconSignOut,
   IconSubmissions,
@@ -34,8 +34,8 @@ const NAV = [
     adminOnly: false,
     Icon: IconSubmissions,
   },
-  { href: '/admin/pages', label: 'Pages', adminOnly: false, Icon: IconPages },
   { href: '/admin/parity', label: 'Amazon parity', adminOnly: false, Icon: IconParity },
+  { href: '/admin/audience', label: 'Audience', adminOnly: true, Icon: IconAudience },
   { href: '/admin/orders', label: 'Orders', adminOnly: true, Icon: IconOrders },
 ] as const;
 
