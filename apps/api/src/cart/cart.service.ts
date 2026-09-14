@@ -5,6 +5,7 @@ import { schema, type Database } from '@zhs/db';
 import type { AddToCartInput, CartLine, CartView, UpdateCartItemInput } from '@zhs/shared';
 import { DEFAULT_CURRENCY } from '@zhs/shared';
 import { DB } from '../db/db.module';
+import { rowsAffected } from '../db/rows-affected';
 
 /** Carts are disposable; a month is long enough for anyone's second thoughts. */
 const CART_TTL_DAYS = 30;
@@ -194,6 +195,6 @@ export class CartService {
     const result = await this.db
       .delete(schema.carts)
       .where(lt(schema.carts.expiresAt, new Date()));
-    return Number((result as unknown as { affectedRows?: number }).affectedRows ?? 0);
+    return rowsAffected(result);
   }
 }

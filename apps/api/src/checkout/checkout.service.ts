@@ -12,6 +12,7 @@ import {
   type OrderView,
 } from '@zhs/shared';
 import { DB } from '../db/db.module';
+import { rowsAffected } from '../db/rows-affected';
 import type { Env } from '../config/env';
 import { CartService } from '../cart/cart.service';
 import { MailService } from '../mail/mail.service';
@@ -230,7 +231,7 @@ export class CheckoutService {
           and(eq(schema.payments.id, payment.id), sql`${schema.payments.status} <> 'successful'`),
         );
 
-      const claimed = Number((claim as unknown as { affectedRows?: number }).affectedRows ?? 0);
+      const claimed = rowsAffected(claim);
       if (claimed === 0) {
         return { handled: true, reason: 'already_settled' as const, receipt: false };
       }

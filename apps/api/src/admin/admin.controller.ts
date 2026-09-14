@@ -43,6 +43,7 @@ import { AuditService } from './audit.service';
 import { ContributorsService } from './contributors.service';
 import { ParityService } from './parity.service';
 import { StorageService } from '../storage/storage.service';
+import { rowsAffected } from '../db/rows-affected';
 
 /**
  * Admin API.
@@ -392,7 +393,7 @@ export class AdminController {
      * second time. Reading affectedRows is what separates the real transition
      * from a double click, exactly as the payment webhook does.
      */
-    const changed = Number((result as unknown as { affectedRows?: number }).affectedRows ?? 0);
+    const changed = rowsAffected(result);
     if (changed > 0) {
       const order = await this.db.query.orders.findFirst({
         where: eq(schema.orders.orderNumber, orderNumber),

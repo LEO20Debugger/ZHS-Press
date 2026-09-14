@@ -28,7 +28,10 @@ function makeStubDb(state: StubState) {
     state.writes.push(`update:${table}`);
     return {
       set: () => ({
-        where: async () => ({ affectedRows: affected }),
+        // Shaped like the real driver: drizzle/mysql2 resolves to the tuple
+        // [ResultSetHeader, FieldPacket[]]. A bare object here is what let a
+        // production bug through a green suite.
+        where: async () => [{ affectedRows: affected }, []],
       }),
     };
   };

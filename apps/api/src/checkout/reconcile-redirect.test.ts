@@ -59,7 +59,8 @@ function makeService(state: StubState): CheckoutService {
     },
     update: (table: unknown) => {
       state.writes.push(`update:${tableNameOf(table)}`);
-      return { set: () => ({ where: async () => ({ affectedRows: 1 }) }) };
+      // The driver returns [ResultSetHeader, FieldPacket[]], not a bare object.
+      return { set: () => ({ where: async () => [{ affectedRows: 1 }, []] }) };
     },
     transaction: async (fn: (tx: unknown) => Promise<unknown>) => fn(db),
   };
