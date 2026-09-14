@@ -4,7 +4,49 @@ import { CheckoutService } from './checkout.service';
 
 interface FlutterwaveWebhookBody {
   event?: string;
-  data?: { id?: number | string; tx_ref?: string; status?: string };
+  id?: number | string;
+  transaction_id?: number | string;
+  data?: {
+    id?: number | string;
+    transaction_id?: number | string;
+    tx_ref?: string;
+    status?: string;
+  };
+}
+
+/**
+ * Pulls the transaction id out of whichever payload shape arrived.
+ *
+ * Flutterwave does not send one shape. The v3 webhook nests the transaction
+ * under `data`; the older format puts `id` at the top level, and which one a
+ * merchant receives depends on a dashboard toggle ("Enable v3 webhooks") that
+ * can be changed without anyone touching this code. Reading only `data.id`
+ * meant an account with that toggle off got a 200 and silent no-op on every
+ * notification — a paid order that never settles, with nothing in the
+ * provider's delivery log to suggest a problem.
+ *
+ * Accepting both shapes costs nothing: the id is only ever a pointer. Whatever
+ * comes out of here is handed straight to Flutterwave to be verified, and it is
+ * their answer — not this payload — that settles anything.
+ */
+export function extractTransactionId(body: FlutterwaveWebhookBody): string | null {
+  const candidates = [
+    body.data?.id,
+    body.data?.transaction_id,
+    body.id,
+    body.transaction_id,
+  ];
+
+  for (const candidate of candidates) {
+    if (candidate == null) continue;
+    const value = String(candidate).trim();
+    // Flutterwave transaction ids are numeric. Anything else is a different
+    // field that happens to be called "id" — an event id, say — and sending it
+    // to the verify endpoint would just produce a confusing failure.
+    if (/^\d+$/.test(value)) return value;
+  }
+
+  return null;
 }
 
 @Controller('webhooks')
@@ -45,13 +87,23 @@ export class WebhookController {
       throw new UnauthorizedException();
     }
 
-    const providerTxId = body.data?.id;
-    if (providerTxId == null) {
-      this.logger.warn('Authenticated webhook carried no transaction id');
+    const providerTxId = extractTransactionId(body);
+    if (providerTxId === null) {
+      /*
+       * Log the shape, not the payload: it can carry a customer's name, email
+       * and card metadata, none of which belongs in a log line. The key names
+       * alone are enough to tell which format arrived, which is the one thing
+       * this message previously left you guessing about.
+       */
+      this.logger.warn(
+        'Authenticated webhook carried no transaction id. Top-level keys: ' +
+          `[${Object.keys(body ?? {}).join(', ')}]` +
+          (body?.data ? `, data keys: [${Object.keys(body.data).join(', ')}]` : ''),
+      );
       return { received: true, handled: false };
     }
 
-    const verified = await this.flutterwave.verifyTransaction(String(providerTxId));
+    const verified = await this.flutterwave.verifyTransaction(providerTxId);
     const result = await this.checkout.settlePayment(verified);
 
     return { received: true, handled: result.handled };
