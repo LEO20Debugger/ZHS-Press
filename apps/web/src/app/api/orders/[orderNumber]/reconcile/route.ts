@@ -34,8 +34,19 @@ export async function POST(
     if (response.status === 404) {
       return NextResponse.json({ message: 'Not found' }, { status: 404 });
     }
+
+    /*
+     * Pass the API's own status and message through rather than flattening
+     * everything to 502. A rejected transaction id is a 400 with a reason, and
+     * reporting that as "Unavailable" sent a real debugging session looking at
+     * the network instead of at the argument.
+     */
     if (!response.ok) {
-      return NextResponse.json({ message: 'Unavailable' }, { status: 502 });
+      const detail = await response.json().catch(() => null);
+      return NextResponse.json(
+        { message: detail?.message ?? 'Unavailable' },
+        { status: response.status },
+      );
     }
 
     return NextResponse.json(await response.json());

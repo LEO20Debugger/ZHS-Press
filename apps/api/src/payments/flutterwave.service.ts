@@ -145,10 +145,26 @@ export class FlutterwaveService {
       { headers: { authorization: `Bearer ${secretKey}` } },
     );
 
-    const body = (await response.json()) as FlutterwaveVerifyResponse;
+    const body = (await response.json().catch(() => null)) as FlutterwaveVerifyResponse | null;
 
-    if (!response.ok || body.status !== 'success' || !body.data) {
-      throw new Error(`Could not verify transaction ${providerTxId}`);
+    if (!response.ok || body?.status !== 'success' || !body.data) {
+      /*
+       * Carry Flutterwave's own answer into the error.
+       *
+       * This previously threw a bare "Could not verify transaction <id>", which
+       * told a reader nothing about WHY — a wrong key, an id from another
+       * environment, and a transaction that genuinely failed all produced the
+       * identical line. The provider's status code and message are the whole
+       * diagnosis, and neither is a secret.
+       */
+      const detail =
+        (body as { message?: string } | null)?.message ??
+        (body === null ? 'response was not JSON' : 'no message');
+
+      throw new Error(
+        `Could not verify transaction ${providerTxId}: HTTP ${response.status}, ` +
+          `status "${body?.status ?? 'none'}", message "${detail}"`,
+      );
     }
 
     return {
