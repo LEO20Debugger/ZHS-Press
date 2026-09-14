@@ -18,7 +18,7 @@ interface StubState {
   payment: Record<string, unknown> | undefined;
   order: Record<string, unknown> | undefined;
   items: Array<Record<string, unknown>>;
-  /** Rows affected by the conditional claim UPDATE on payments. */
+  /** Rows affected by the conditional claim UPDATE on orders. */
   claimAffected: number;
   writes: string[];
 }
@@ -54,7 +54,7 @@ function makeStubDb(state: StubState) {
     },
     update: (table: unknown) => {
       const name = tableNameOf(table);
-      return recordUpdate(name, name === 'payments' ? state.claimAffected : 1);
+      return recordUpdate(name, name === 'orders' ? state.claimAffected : 1);
     },
     transaction: async (fn: (tx: unknown) => Promise<unknown>) => fn(api),
   };
@@ -146,15 +146,39 @@ describe('settlePayment', () => {
     expect(state.writes).not.toContain('update:orders');
   });
 
-  it('stops when the payment was already claimed, leaving stock alone', async () => {
-    // This is the redelivery case: the conditional UPDATE affects zero rows
-    // because another delivery already settled it. No second decrement.
+  it('stops when the order was already claimed, leaving stock alone', async () => {
+    /*
+     * The redelivery case: the conditional UPDATE on orders matches zero rows
+     * because the order is no longer pending. The claim itself is still
+     * attempted — that attempt IS the lock — so what proves nothing happened
+     * twice is the absence of the writes that follow it: no second stock
+     * decrement, no payment row rewritten, no receipt.
+     */
     const state = baseState({ claimAffected: 0 });
     const result = await makeService(state).settlePayment(VERIFIED);
 
     expect(result).toEqual({ handled: true, reason: 'already_settled' });
-    expect(state.writes).not.toContain('update:orders');
     expect(state.writes).not.toContain('update:inventory');
+    expect(state.writes).not.toContain('update:products');
+    expect(state.writes).not.toContain('update:payments');
+  });
+
+  it('settles an order left pending beside an already-successful payment', async () => {
+    /*
+     * The state the old claim-on-payments bug left behind in production: the
+     * payment row committed as successful while the order stayed pending and
+     * unreceipted. Claiming the order rather than the payment is what makes
+     * this recoverable rather than permanently stuck.
+     */
+    const state = baseState({
+      payment: { ...PAYMENT, status: 'successful' },
+      claimAffected: 1,
+    });
+    const result = await makeService(state).settlePayment(VERIFIED);
+
+    expect(result.handled).toBe(true);
+    expect(state.writes).toContain('update:orders');
+    expect(state.writes).toContain('update:inventory');
   });
 
   it('marks paid and adjusts stock on a clean first delivery', async () => {

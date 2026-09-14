@@ -218,28 +218,42 @@ export class CheckoutService {
     }
 
     const outcome = await this.db.transaction(async (tx) => {
-      // Atomic claim. If another delivery already settled this payment, this
-      // affects zero rows and we stop — no second decrement, no second email.
+      /*
+       * Atomic claim, made on the ORDER rather than the payment.
+       *
+       * The thing that must never happen twice is settling the order: one stock
+       * decrement, one receipt. Claiming the order row is therefore both the
+       * accurate guard and the safe one — two concurrent deliveries race on a
+       * single UPDATE and MySQL lets exactly one see a row count of 1.
+       *
+       * It used to claim the payment row instead, which was subtly wrong in a
+       * way that only showed up once the row count could be read at all: the
+       * payment UPDATE ran, the early return committed it, and an order whose
+       * payment now said "successful" could never be settled afterwards,
+       * because the claim's own predicate excluded it. Keying on the order both
+       * removes that trap and repairs the rows it already created — a payment
+       * marked successful beside a pending order is exactly the state this
+       * reclaims.
+       */
       const claim = await tx
-        .update(schema.payments)
-        .set({
-          status: 'successful',
-          providerTxId: verified.providerTxId,
-          rawPayload: verified.raw,
-        })
-        .where(
-          and(eq(schema.payments.id, payment.id), sql`${schema.payments.status} <> 'successful'`),
-        );
+        .update(schema.orders)
+        .set({ status: 'paid', paidAt: new Date() })
+        .where(and(eq(schema.orders.id, order.id), eq(schema.orders.status, 'pending')));
 
       const claimed = rowsAffected(claim);
       if (claimed === 0) {
         return { handled: true, reason: 'already_settled' as const, receipt: false };
       }
 
+      // Only now, having won the claim, record the provider's side of it.
       await tx
-        .update(schema.orders)
-        .set({ status: 'paid', paidAt: new Date() })
-        .where(eq(schema.orders.id, order.id));
+        .update(schema.payments)
+        .set({
+          status: 'successful',
+          providerTxId: verified.providerTxId,
+          rawPayload: verified.raw,
+        })
+        .where(eq(schema.payments.id, payment.id));
 
       const items = await tx.query.orderItems.findMany({
         where: eq(schema.orderItems.orderId, order.id),
