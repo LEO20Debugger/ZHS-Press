@@ -88,6 +88,16 @@ export const orders = mysqlTable(
     id: int('id').autoincrement().primaryKey(),
     /** Human-readable public reference, e.g. ZHS-7F3K9Q. Used in URLs and emails. */
     orderNumber: varchar('order_number', { length: 24 }).notNull(),
+    /**
+     * The cart this order was placed from, so settlement can empty it.
+     *
+     * Settlement happens in the Flutterwave webhook — server to server, with no
+     * session cookie — so without this column the API has no way to know which
+     * cart to clear, and a customer's basket still held what they had just
+     * bought. Nullable and ON DELETE SET NULL: carts are purged once they
+     * expire, and losing that row must never take the order with it.
+     */
+    cartId: int('cart_id').references(() => carts.id, { onDelete: 'set null' }),
     email: varchar('email', { length: 320 }).notNull(),
     status: mysqlEnum('status', orderStatus).notNull().default('pending'),
 

@@ -1,0 +1,2 @@
+ALTER TABLE `orders` ADD `cart_id` int;--> statement-breakpoint
+ALTER TABLE `orders` ADD CONSTRAINT `orders_cart_id_carts_id_fk` FOREIGN KEY (`cart_id`) REFERENCES `carts`(`id`) ON DELETE set null ON UPDATE no action;

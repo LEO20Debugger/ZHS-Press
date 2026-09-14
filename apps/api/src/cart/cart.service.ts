@@ -32,6 +32,17 @@ export class CartService {
     return cart;
   }
 
+  /**
+   * The cart row's id for a session token, or null if there is no cart.
+   *
+   * Checkout stores this on the order so settlement — which runs in the webhook
+   * with no cookie to read — can empty the right cart later.
+   */
+  async cartIdFor(token: string): Promise<number | null> {
+    const cart = await this.findCart(token);
+    return cart?.id ?? null;
+  }
+
   async ensureCart(token: string): Promise<void> {
     const existing = await this.findCart(token);
     if (existing) {

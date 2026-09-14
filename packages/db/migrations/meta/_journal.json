@@ -8,6 +8,13 @@
       "when": 1788813595304,
       "tag": "0000_bizarre_argent",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1789384667949,
+      "tag": "0001_silly_power_pack",
+      "breakpoints": true
     }
   ]
 }

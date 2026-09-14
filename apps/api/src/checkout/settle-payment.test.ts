@@ -52,6 +52,10 @@ function makeStubDb(state: StubState) {
       orders: { findFirst: async () => state.order },
       orderItems: { findMany: async () => state.items },
     },
+    delete: (table: unknown) => {
+      state.writes.push(`delete:${tableNameOf(table)}`);
+      return { where: async () => [{ affectedRows: 1 }, []] };
+    },
     update: (table: unknown) => {
       const name = tableNameOf(table);
       return recordUpdate(name, name === 'orders' ? state.claimAffected : 1);
@@ -76,7 +80,7 @@ function makeService(state: StubState): CheckoutService {
   );
 }
 
-const ORDER = { id: 1, orderNumber: 'ZHS-TEST01', totalCents: 6349, currency: 'USD' };
+const ORDER = { id: 1, orderNumber: 'ZHS-TEST01', totalCents: 6349, currency: 'USD', cartId: 55 };
 const PAYMENT = { id: 10, orderId: 1, txRef: 'ZHS-TEST01-abc', status: 'initiated' };
 
 function baseState(overrides: Partial<StubState> = {}): StubState {
@@ -189,5 +193,43 @@ describe('settlePayment', () => {
     expect(state.writes).toContain('update:payments');
     expect(state.writes).toContain('update:orders');
     expect(state.writes).toContain('update:inventory');
+  });
+
+  it('empties the basket the order was placed from', async () => {
+    // Otherwise the customer is left holding what they just bought, one click
+    // from buying it again.
+    const state = baseState();
+    await makeService(state).settlePayment(VERIFIED);
+
+    expect(state.writes).toContain('delete:cart_items');
+  });
+
+  it('leaves the basket alone when the payment failed', async () => {
+    // The retry case. A cancelled payment must leave the items in place so the
+    // customer can simply try again.
+    const state = baseState();
+    await makeService(state).settlePayment({ ...VERIFIED, successful: false });
+
+    expect(state.writes).not.toContain('delete:cart_items');
+  });
+
+  it('leaves the basket alone on a redelivery', async () => {
+    // The second webhook must not empty a basket the customer has since
+    // refilled with different items.
+    const state = baseState({ claimAffected: 0 });
+    await makeService(state).settlePayment(VERIFIED);
+
+    expect(state.writes).not.toContain('delete:cart_items');
+  });
+
+  it('settles an order that predates the cart link', async () => {
+    // cart_id is nullable and every order created before the column existed
+    // has NULL. Those must still settle rather than throw.
+    const state = baseState({ order: { ...ORDER, cartId: null } });
+    const result = await makeService(state).settlePayment(VERIFIED);
+
+    expect(result).toEqual({ handled: true });
+    expect(state.writes).toContain('update:orders');
+    expect(state.writes).not.toContain('delete:cart_items');
   });
 });

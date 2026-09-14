@@ -98,9 +98,14 @@ export class CheckoutService {
     const orderNumber = generateOrderNumber();
     const txRef = FlutterwaveService.generateTxRef(orderNumber);
 
+    // Recorded now, while we still hold the session token. The webhook that
+    // settles this order will not have one.
+    const cartId = await this.cart.cartIdFor(cartToken);
+
     const orderId = await this.db.transaction(async (tx) => {
       const [inserted] = await tx.insert(schema.orders).values({
         orderNumber,
+        cartId,
         email: input.email,
         status: 'pending',
         subtotalCents: totals.subtotalCents,
@@ -284,6 +289,24 @@ export class CheckoutService {
                     AND i.track_inventory = 1 AND i.allow_backorder = 0 AND i.quantity <= 0)`,
             ),
           );
+      }
+
+      /*
+       * Empty the basket this order came from.
+       *
+       * Inside the claim, so it happens exactly once and only for the delivery
+       * that actually settled — and inside the transaction, so a cart is never
+       * emptied for an order that then rolls back.
+       *
+       * Only the items go; the cart row stays. Deleting it would invalidate the
+       * token in the customer's cookie and force the next add to mint a new one.
+       *
+       * Note what is deliberately NOT here: clearing on failure. A payment that
+       * fails or is cancelled must leave the basket intact so the customer can
+       * simply try again.
+       */
+      if (order.cartId != null) {
+        await tx.delete(schema.cartItems).where(eq(schema.cartItems.cartId, order.cartId));
       }
 
       this.logger.log(`Order ${order.orderNumber} paid and stock adjusted`);

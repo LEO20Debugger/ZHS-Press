@@ -40,7 +40,8 @@ export function OrderStatusPanel({ orderNumber }: { orderNumber: string }) {
 
         if (data.status === 'paid' || data.status === 'fulfilled') {
           setPhase('paid');
-          // The cart was cleared server-side; sync the header badge.
+          // Settlement empties the basket this order came from, in the same
+          // transaction that marks it paid. Re-read so the header badge agrees.
           void refresh();
           return;
         }
