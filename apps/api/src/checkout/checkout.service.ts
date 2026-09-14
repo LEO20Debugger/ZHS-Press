@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { BadRequestException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { and, asc, eq, or, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, or, sql } from 'drizzle-orm';
 import { schema, type Database } from '@zhs/db';
 import {
   calculateOrderTotals,
@@ -169,9 +169,9 @@ export class CheckoutService {
    * from Flutterwave carries attacker-controlled query parameters and grants
    * nothing.
    *
-   * Idempotency is enforced by a conditional UPDATE on the payment row rather
-   * than by reading-then-writing: the `status <> 'successful'` predicate makes
-   * claiming the payment an atomic operation, so two webhooks delivered
+   * Idempotency is enforced by a conditional UPDATE on the ORDER row rather
+   * than by reading-then-writing: the `status = 'pending'` predicate makes
+   * claiming the order an atomic operation, so two webhooks delivered
    * concurrently cannot both proceed. Exactly one wins and decrements stock.
    */
   async settlePayment(verified: {
@@ -292,21 +292,37 @@ export class CheckoutService {
       }
 
       /*
-       * Empty the basket this order came from.
+       * Remove the purchased lines from the basket this order came from.
+       *
+       * Scoped to the products actually on the order, not the whole cart. A
+       * customer can add something in another tab while the payment page is
+       * open, and emptying wholesale would delete an item they never bought and
+       * never agreed to lose. What they paid for goes; anything else stays.
        *
        * Inside the claim, so it happens exactly once and only for the delivery
-       * that actually settled — and inside the transaction, so a cart is never
-       * emptied for an order that then rolls back.
+       * that settled — and inside the transaction, so nothing is removed from a
+       * basket for an order that then rolls back.
        *
-       * Only the items go; the cart row stays. Deleting it would invalidate the
-       * token in the customer's cookie and force the next add to mint a new one.
+       * The cart row itself stays. Deleting it would invalidate the token in the
+       * customer's cookie and force the next add to mint a new one.
        *
        * Note what is deliberately NOT here: clearing on failure. A payment that
-       * fails or is cancelled must leave the basket intact so the customer can
-       * simply try again.
+       * fails or is cancelled must leave the basket untouched so the customer
+       * can simply try again.
        */
-      if (order.cartId != null) {
-        await tx.delete(schema.cartItems).where(eq(schema.cartItems.cartId, order.cartId));
+      const purchasedProductIds = items
+        .map((item) => item.productId)
+        .filter((id): id is number => id != null);
+
+      if (order.cartId != null && purchasedProductIds.length > 0) {
+        await tx
+          .delete(schema.cartItems)
+          .where(
+            and(
+              eq(schema.cartItems.cartId, order.cartId),
+              inArray(schema.cartItems.productId, purchasedProductIds),
+            ),
+          );
       }
 
       this.logger.log(`Order ${order.orderNumber} paid and stock adjusted`);

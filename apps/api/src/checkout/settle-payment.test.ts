@@ -195,13 +195,28 @@ describe('settlePayment', () => {
     expect(state.writes).toContain('update:inventory');
   });
 
-  it('empties the basket the order was placed from', async () => {
+  it('removes the purchased lines from the basket', async () => {
     // Otherwise the customer is left holding what they just bought, one click
     // from buying it again.
     const state = baseState();
     await makeService(state).settlePayment(VERIFIED);
 
     expect(state.writes).toContain('delete:cart_items');
+  });
+
+  it('touches nothing in the basket when the order has no known products', async () => {
+    /*
+     * Every line's product has since been deleted, so productId is null. There
+     * is nothing to match on, and a delete scoped to the cart alone would take
+     * whatever the customer has in it now — items from a different shopping
+     * session entirely.
+     */
+    const state = baseState({ items: [{ productId: null, quantity: 1 }] });
+    const result = await makeService(state).settlePayment(VERIFIED);
+
+    expect(result).toEqual({ handled: true });
+    expect(state.writes).toContain('update:orders');
+    expect(state.writes).not.toContain('delete:cart_items');
   });
 
   it('leaves the basket alone when the payment failed', async () => {

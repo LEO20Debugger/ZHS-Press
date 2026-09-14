@@ -172,6 +172,34 @@ export class AudienceService {
     return { ok: true as const };
   }
 
+  /**
+   * Erases a waitlist entry. Irreversible, like the subscriber equivalent.
+   *
+   * A waitlist entry is an email address someone handed over for one purpose,
+   * so the same reasoning applies: a removal request has to actually remove it,
+   * and a soft delete would not.
+   *
+   * The audit entry records the id and whether they had already been notified —
+   * never the address. Writing it into an audit log at the moment someone asks
+   * to be erased would defeat the erasure.
+   */
+  async deleteWaitlistEntry(id: number, actor: AdminPrincipal) {
+    const existing = await this.db.query.waitlistEntries.findFirst({
+      where: eq(schema.waitlistEntries.id, id),
+      columns: { id: true, notifiedAt: true },
+    });
+
+    if (!existing) throw new NotFoundException('That waitlist entry no longer exists.');
+
+    await this.db.delete(schema.waitlistEntries).where(eq(schema.waitlistEntries.id, id));
+
+    await this.audit.record(actor, 'waitlist.delete', 'waitlist_entry', String(id), {
+      notified: { from: existing.notifiedAt ? 'yes' : 'no', to: null },
+    });
+
+    return { ok: true as const };
+  }
+
   /** Titles with people still waiting — surfaced on the dashboard. */
   async pendingNotifications() {
     const [row] = await this.db

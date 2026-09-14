@@ -190,6 +190,21 @@ export class AdminController {
     return this.audience.waitlistEntries(productId ? Number(productId) : undefined);
   }
 
+  /**
+   * Erases a waitlist entry. Irreversible, and admin-only like everything here.
+   *
+   * Registered before the CSV route for readability only — the two cannot
+   * collide, being different methods on different paths.
+   */
+  @Delete('waitlist/entries/:id')
+  @Roles('admin')
+  deleteWaitlistEntry(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return this.audience.deleteWaitlistEntry(id, request.admin!);
+  }
+
   @Get('waitlist.csv')
   @Roles('admin')
   @Header('content-type', 'text/csv; charset=utf-8')

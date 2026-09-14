@@ -55,6 +55,40 @@ export default function AudiencePage() {
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
+  /*
+   * Separate state from the subscriber delete above, not shared.
+   * A waitlist entry and a subscriber can hold the same numeric id, so one
+   * "which row is confirming?" value would arm the delete on both tables at
+   * once — invisibly, since only one tab is ever on screen.
+   */
+  const [confirmingEntry, setConfirmingEntry] = useState<number | null>(null);
+  const [deletingEntry, setDeletingEntry] = useState(false);
+  const [entryDeleteError, setEntryDeleteError] = useState<string | null>(null);
+
+  async function removeEntry(id: number) {
+    setDeletingEntry(true);
+    setEntryDeleteError(null);
+
+    const response = await fetch(`/api/admin/admin/waitlist/entries/${id}`, { method: 'DELETE' });
+    setDeletingEntry(false);
+    setConfirmingEntry(null);
+
+    if (!response.ok) {
+      const payload = await response.json().catch(() => null);
+      setEntryDeleteError(payload?.message ?? 'Could not delete that waitlist entry.');
+      return;
+    }
+
+    // Drop it locally so the row goes at once, then refresh the per-title
+    // counts above, which have changed.
+    setEntries((prev) => prev.filter((entry) => entry.id !== id));
+    void fetch('/api/admin/admin/waitlist', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data) setGroups(data);
+      });
+  }
+
   async function removeSubscriber(id: number) {
     setDeleting(true);
     setDeleteError(null);
@@ -234,7 +268,10 @@ export default function AudiencePage() {
                         Title
                       </th>
                       <th scope="col" className="py-3 pr-4 font-ui font-medium">Joined</th>
-                      <th scope="col" className="py-3 font-ui font-medium">Notified</th>
+                      <th scope="col" className="py-3 pr-4 font-ui font-medium">Notified</th>
+                      <th scope="col" className="py-3 text-right font-ui font-medium">
+                        <span className="sr-only">Actions</span>
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -247,14 +284,55 @@ export default function AudiencePage() {
                         <td className="whitespace-nowrap py-3 pr-4 text-ink-muted">
                           {when(entry.createdAt)}
                         </td>
-                        <td className="whitespace-nowrap py-3 text-ink-muted">
+                        <td className="whitespace-nowrap py-3 pr-4 text-ink-muted">
                           {when(entry.notifiedAt)}
+                        </td>
+                        <td className="py-3 text-right">
+                          {confirmingEntry === entry.id ? (
+                            <span className="flex items-center justify-end gap-3 whitespace-nowrap">
+                              <button
+                                type="button"
+                                onClick={() => void removeEntry(entry.id)}
+                                disabled={deletingEntry}
+                                className="link-underline text-caption text-danger disabled:opacity-50"
+                              >
+                                {deletingEntry ? 'Deleting…' : 'Yes, delete'}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setConfirmingEntry(null)}
+                                className="link-underline text-caption text-ink-muted"
+                              >
+                                Cancel
+                              </button>
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => setConfirmingEntry(entry.id)}
+                              aria-label={`Delete waitlist entry for ${entry.email}`}
+                              className="link-underline text-caption text-ink-muted hover:text-danger"
+                            >
+                              Delete
+                            </button>
+                          )}
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
+
+              {entryDeleteError ? (
+                <p role="alert" className="mt-3 text-caption text-danger">
+                  {entryDeleteError}
+                </p>
+              ) : null}
+
+              <p className="mt-6 max-w-2xl text-caption text-ink-muted">
+                Deleting erases the entry entirely — use it for test entries or a request to be
+                removed. Someone deleted before a title ships will not be emailed when it does.
+              </p>
             </>
           )}
         </div>
