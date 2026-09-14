@@ -359,6 +359,76 @@ export class CheckoutService {
     }
   }
 
+  /**
+   * Settles from the customer's return visit, when the webhook has not landed.
+   *
+   * The webhook remains the primary path and this does not replace it: someone
+   * who closes the tab at the payment page never comes back here, so without
+   * the webhook their order would never settle. What this covers is the
+   * opposite failure — a webhook delayed, dropped, or pointed at the wrong URL
+   * — which would otherwise leave a genuinely paid order pending forever, with
+   * no receipt and no stock movement.
+   *
+   * The trust model is unchanged. The redirect's query string is not evidence
+   * of anything; `transactionId` is taken from it only as a POINTER, and what
+   * settles the order is Flutterwave's own answer about that transaction —
+   * exactly the call the webhook path makes. `settlePayment` then re-asserts
+   * amount and currency and claims the payment atomically, so arriving here
+   * twice, or here and by webhook at once, still settles once.
+   */
+  async reconcileFromRedirect(orderNumber: string, transactionId: string): Promise<OrderView> {
+    const order = await this.db.query.orders.findFirst({
+      where: eq(schema.orders.orderNumber, orderNumber),
+    });
+
+    if (!order) throw new NotFoundException('Order not found');
+
+    /*
+     * Already decided — return without calling Flutterwave. This endpoint is
+     * reachable by anyone holding an order number, and an unconditional
+     * outbound call per request would let a stranger drive our request rate at
+     * the provider using nothing but page reloads.
+     */
+    if (order.status !== 'pending') return this.findOrder(orderNumber);
+
+    let verified: Awaited<ReturnType<FlutterwaveService['verifyTransaction']>>;
+    try {
+      verified = await this.flutterwave.verifyTransaction(transactionId);
+    } catch (error) {
+      /*
+       * A failed lookup is not a failed payment. The webhook may still be on
+       * its way and the page is polling, so change nothing and let the order
+       * stand as pending.
+       */
+      this.logger.warn(
+        `Could not verify transaction ${transactionId} for ${orderNumber} from ` +
+          `redirect: ${error instanceof Error ? error.message : 'unknown error'}`,
+      );
+      return this.findOrder(orderNumber);
+    }
+
+    /*
+     * The transaction must belong to THIS order. Flutterwave is authoritative
+     * about the transaction, but the id reached us through a URL, so it can
+     * name a payment that is real, successful, and somebody else's. Settling on
+     * it would mark this order paid against a stranger's money.
+     */
+    const payment = await this.db.query.payments.findFirst({
+      where: eq(schema.payments.txRef, verified.txRef),
+    });
+
+    if (!payment || payment.orderId !== order.id) {
+      this.logger.warn(
+        `Redirect for ${orderNumber} carried transaction ${transactionId}, which ` +
+          'belongs to a different order. Ignored.',
+      );
+      return this.findOrder(orderNumber);
+    }
+
+    await this.settlePayment(verified);
+    return this.findOrder(orderNumber);
+  }
+
   async findOrder(orderNumber: string): Promise<OrderView> {
     const order = await this.db.query.orders.findFirst({
       where: eq(schema.orders.orderNumber, orderNumber),

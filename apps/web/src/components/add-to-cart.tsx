@@ -7,10 +7,35 @@ import { useCart } from './cart-provider';
 /** How long the confirmation label stays before reverting. */
 const CONFIRM_MS = 2500;
 
+/**
+ * Persistent "already in your cart" marker.
+ *
+ * Separate from the button's transient "Added ✓", which reverts after a couple
+ * of seconds so the control never looks stuck. That flash answers "did my click
+ * work"; this answers "do I already have this", which is a different question
+ * and is still worth answering on a later visit, on another page, or after a
+ * reload. Reading the server-owned cart means it cannot drift from the cart
+ * page.
+ *
+ * Not a live region: it is a standing fact about the page, and the button
+ * already announces the change that caused it.
+ */
+function InCart({ quantity, className = '' }: { quantity: number; className?: string }) {
+  if (quantity < 1) return null;
+
+  return (
+    <p className={`font-ui text-caption text-moss ${className}`}>
+      <span aria-hidden="true">✓ </span>
+      {quantity === 1 ? 'In your cart' : `In your cart × ${quantity}`}
+    </p>
+  );
+}
+
 /** Full-width add button for a product detail page. */
 export function AddToCart({ productId, title }: { productId: number; title: string }) {
-  const { addItem, loading, error } = useCart();
+  const { addItem, loading, error, quantityOf } = useCart();
   const [added, setAdded] = useState(false);
+  const inCart = quantityOf(productId);
 
   async function onClick() {
     const ok = await addItem(productId);
@@ -25,8 +50,9 @@ export function AddToCart({ productId, title }: { productId: number; title: stri
   return (
     <div>
       <Button onClick={onClick} disabled={loading}>
-        {loading ? 'Adding…' : added ? 'Added to cart ✓' : 'Add to cart'}
+        {loading ? 'Adding…' : added ? 'Added to cart ✓' : inCart ? 'Add another' : 'Add to cart'}
       </Button>
+      <InCart quantity={inCart} className="mt-3" />
       {error ? (
         <p role="alert" className="mt-2 text-caption text-danger">
           {error}
@@ -49,8 +75,9 @@ export function AddToCart({ productId, title }: { productId: number; title: stri
  * buttons all named "Add" are useless to anyone navigating by control.
  */
 export function QuickAdd({ productId, title }: { productId: number; title: string }) {
-  const { addItem, loading } = useCart();
+  const { addItem, loading, quantityOf } = useCart();
   const [state, setState] = useState<'idle' | 'busy' | 'added' | 'failed'>('idle');
+  const inCart = quantityOf(productId);
 
   async function onClick() {
     setState('busy');
@@ -75,7 +102,9 @@ export function QuickAdd({ productId, title }: { productId: number; title: strin
         ? 'Added ✓'
         : state === 'failed'
           ? 'Unavailable'
-          : 'Add to cart';
+          : inCart
+            ? 'Add another'
+            : 'Add to cart';
 
   return (
     /*
@@ -85,11 +114,14 @@ export function QuickAdd({ productId, title }: { productId: number; title: strin
       button's name changing.
     */
     <>
+      <InCart quantity={inCart} className="mb-2" />
       <button
         type="button"
         onClick={onClick}
         disabled={loading || state === 'busy'}
-        aria-label={`Add ${title} to cart`}
+        aria-label={
+          inCart ? `Add another ${title} to cart` : `Add ${title} to cart`
+        }
         className={`press w-full rounded-pill border px-4 py-2 font-ui text-caption uppercase tracking-wide transition-colors duration-base ease-out disabled:opacity-50 ${
           state === 'added'
             ? 'border-moss bg-moss text-paper-raised'

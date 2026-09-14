@@ -21,6 +21,8 @@ interface CartContextValue {
   updateItem: (productId: number, quantity: number) => Promise<void>;
   clear: () => Promise<void>;
   refresh: () => Promise<void>;
+  /** How many of this product are already in the cart. 0 if none. */
+  quantityOf: (productId: number) => number;
 }
 
 const CartContext = createContext<CartContextValue | null>(null);
@@ -123,9 +125,19 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  /*
+   * Reads the server's cart, never a local tally. The provider's whole rule is
+   * that the server owns what the cart contains, and an indicator that
+   * disagrees with the cart page is worse than no indicator at all.
+   */
+  const quantityOf = useCallback(
+    (productId: number) => cart.lines.find((line) => line.productId === productId)?.quantity ?? 0,
+    [cart],
+  );
+
   const value = useMemo(
-    () => ({ cart, loading, error, addItem, updateItem, clear, refresh }),
-    [cart, loading, error, addItem, updateItem, clear, refresh],
+    () => ({ cart, loading, error, addItem, updateItem, clear, refresh, quantityOf }),
+    [cart, loading, error, addItem, updateItem, clear, refresh, quantityOf],
   );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
