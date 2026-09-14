@@ -267,7 +267,20 @@ export default function AudiencePage() {
                       <th scope="col" className="hidden py-3 pr-4 font-ui font-medium sm:table-cell">
                         Title
                       </th>
-                      <th scope="col" className="py-3 pr-4 font-ui font-medium">Joined</th>
+                      {/*
+                        Joined drops out below sm. Adding the Actions column
+                        pushed this table past a narrow phone's width, which put
+                        the Delete button off-screen behind a sideways scroll —
+                        an action nobody would find. Of the four, the join date
+                        is the one you never act on; "notified" is the column
+                        that tells you whether this person is still waiting.
+                      */}
+                      <th
+                        scope="col"
+                        className="hidden py-3 pr-4 font-ui font-medium sm:table-cell"
+                      >
+                        Joined
+                      </th>
                       <th scope="col" className="py-3 pr-4 font-ui font-medium">Notified</th>
                       <th scope="col" className="py-3 text-right font-ui font-medium">
                         <span className="sr-only">Actions</span>
@@ -281,7 +294,7 @@ export default function AudiencePage() {
                         <td className="hidden py-3 pr-4 text-ink-muted sm:table-cell">
                           {entry.product?.title ?? '—'}
                         </td>
-                        <td className="whitespace-nowrap py-3 pr-4 text-ink-muted">
+                        <td className="hidden whitespace-nowrap py-3 pr-4 text-ink-muted sm:table-cell">
                           {when(entry.createdAt)}
                         </td>
                         <td className="whitespace-nowrap py-3 pr-4 text-ink-muted">
