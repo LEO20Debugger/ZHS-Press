@@ -4,6 +4,7 @@ import { useState, type FormEvent } from 'react';
 import { createCheckoutSchema, formatMoney } from '@zhs/shared';
 import { useCart } from '@/components/cart-provider';
 import { Button, Eyebrow, HandDrawnRule } from '@/components/primitives';
+import { TestModeNotice } from '@/components/test-mode-notice';
 
 const FIELD =
   'w-full border border-rule bg-paper-raised px-4 py-3 font-ui text-small text-ink ' +
@@ -134,6 +135,8 @@ export default function CheckoutPage() {
       <Eyebrow>Checkout</Eyebrow>
       <h1 className="mt-4 text-display">Where should it go?</h1>
       <HandDrawnRule className="mt-5 max-w-[200px] text-terracotta" />
+
+      <TestModeNotice />
 
       <div className="mt-12 grid gap-16 lg:grid-cols-[1.4fr_1fr]">
         <form onSubmit={onSubmit} noValidate className="space-y-6">
