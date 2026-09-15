@@ -116,6 +116,34 @@ export async function listIssues(): Promise<ProductSummary[]> {
 }
 
 /**
+ * The issue the magazine page leads with, or null.
+ *
+ * Null is a normal answer, not a failure: between issues, or once an editor's
+ * window has closed, the page shows no headline. Which issue it is — and for
+ * how long — is set in the admin, never inferred here.
+ */
+export async function getLatestIssue(): Promise<ProductSummary | null> {
+  if (USE_FIXTURES) {
+    const today = new Date().toLocaleDateString('en-CA');
+    const live = FIXTURE_PRODUCTS.filter(
+      (item) =>
+        item.type === 'magazine' &&
+        item.issue?.isLatest === true &&
+        (item.issue.latestUntil == null || item.issue.latestUntil >= today),
+    ).sort((a, b) => (b.issue?.issueNumber ?? 0) - (a.issue?.issueNumber ?? 0));
+
+    const latest = live[0];
+    if (!latest) return null;
+
+    const { description, images, book, issue, stationery, seoTitle, seoDescription, ...summary } =
+      latest;
+    return summary;
+  }
+
+  return apiGet<ProductSummary | null>('/products/issues/latest');
+}
+
+/**
  * Slugs to pre-render at build time, for generateStaticParams and sitemap.xml.
  *
  * This is the one read that degrades instead of throwing. An unreachable API

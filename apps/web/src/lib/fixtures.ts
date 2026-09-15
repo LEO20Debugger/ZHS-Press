@@ -213,6 +213,8 @@ export const FIXTURE_PRODUCTS: ProductDetail[] = [
       editorNote:
         'We asked for work about what gets passed on. Almost everything we received was about hands.',
       publishedDate: '2025-07-01',
+      isLatest: true,
+      latestUntil: null,
       contributors: [
         { name: 'Ruth Ellinger', slug: 'ruth-ellinger', pieceTitle: 'Nine Ways of Keeping' },
         { name: 'Sade Balogun', slug: 'sade-balogun', pieceTitle: 'My Mother’s Hands' },
@@ -248,6 +250,8 @@ export const FIXTURE_PRODUCTS: ProductDetail[] = [
       theme: 'Repair',
       editorNote: null,
       publishedDate: '2024-11-04',
+      isLatest: false,
+      latestUntil: null,
       contributors: [],
     },
     stationery: null,
@@ -279,6 +283,8 @@ export const FIXTURE_PRODUCTS: ProductDetail[] = [
       theme: 'Thresholds',
       editorNote: null,
       publishedDate: '2023-10-02',
+      isLatest: false,
+      latestUntil: null,
       contributors: [],
     },
     stationery: null,

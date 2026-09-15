@@ -46,6 +46,8 @@ interface FormState {
   theme: string;
   editorNote: string;
   publishedDate: string;
+  isLatestIssue: boolean;
+  latestUntil: string;
 
   dimensions: string;
   material: string;
@@ -90,6 +92,8 @@ const EMPTY: FormState = {
   theme: '',
   editorNote: '',
   publishedDate: '',
+  isLatestIssue: false,
+  latestUntil: '',
 
   dimensions: '',
   material: '',
@@ -218,6 +222,8 @@ export default function ProductEditPage({ params }: { params: Promise<{ id: stri
           theme: p.issue?.theme ?? '',
           editorNote: p.issue?.editorNote ?? '',
           publishedDate: p.issue?.publishedDate ?? '',
+          isLatestIssue: Boolean(p.issue?.isLatest),
+          latestUntil: p.issue?.latestUntil ?? '',
 
           dimensions: p.stationery?.dimensions ?? '',
           material: p.stationery?.material ?? '',
@@ -283,6 +289,8 @@ export default function ProductEditPage({ params }: { params: Promise<{ id: stri
               theme: text(form.theme),
               editorNote: text(form.editorNote),
               publishedDate: form.publishedDate || undefined,
+              isLatest: form.isLatestIssue,
+              latestUntil: form.isLatestIssue ? form.latestUntil || undefined : undefined,
             },
           }
         : {}),
@@ -522,6 +530,39 @@ export default function ProductEditPage({ params }: { params: Promise<{ id: stri
                 <textarea id="editorNote" rows={5} value={form.editorNote}
                   onChange={(e) => set('editorNote', e.target.value)} className={FIELD} />
               </Field>
+            </div>
+
+            {/*
+              Which issue leads the magazine page. Only one can, so ticking this
+              stands the previous headline down on save — said plainly here,
+              because that is a change to a page the editor is not looking at.
+            */}
+            <div className="mt-6 border-t border-rule pt-6">
+              <label className="flex items-start gap-3">
+                <input type="checkbox" checked={form.isLatestIssue} className="mt-1"
+                  onChange={(e) => set('isLatestIssue', e.target.checked)} />
+                <span>
+                  <span className="font-medium">Lead the magazine page with this issue</span>
+                  <span className="mt-1 block text-small text-ink-muted">
+                    Shows it as &ldquo;The latest issue&rdquo;, with its cover, above the listing.
+                    Only one issue at a time — saving this stands down whichever issue holds it now.
+                  </span>
+                </span>
+              </label>
+
+              {form.isLatestIssue ? (
+                <div className="mt-4 max-w-xs">
+                  <Field
+                    label="Until"
+                    id="latestUntil"
+                    hint="Optional — the last day it leads. Leave empty to run until another issue replaces it."
+                    error={errors['issue.latestUntil']}
+                  >
+                    <input id="latestUntil" type="date" value={form.latestUntil}
+                      onChange={(e) => set('latestUntil', e.target.value)} className={FIELD} />
+                  </Field>
+                </div>
+              ) : null}
             </div>
           </fieldset>
         ) : null}

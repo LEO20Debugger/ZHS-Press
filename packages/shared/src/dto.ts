@@ -62,6 +62,10 @@ export interface IssueDetail {
   theme: string | null;
   editorNote: string | null;
   publishedDate: string | null;
+  /** Whether this issue is the one the magazine page leads with. */
+  isLatest: boolean;
+  /** Last day it stays the headline, inclusive. NULL means indefinitely. */
+  latestUntil: string | null;
   contributors: Array<{ name: string; slug: string; pieceTitle: string | null }>;
 }
 

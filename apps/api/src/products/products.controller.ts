@@ -18,6 +18,17 @@ export class ProductsController {
     return this.products.listIssues();
   }
 
+  /**
+   * The issue the magazine page leads with, or null between issues.
+   *
+   * Declared above `:slug` so the two-segment path is matched as a route
+   * rather than read as a product slug.
+   */
+  @Get('issues/latest')
+  latestIssue() {
+    return this.products.getLatestIssue();
+  }
+
   @Get(':slug')
   findOne(@Param('slug') slug: string) {
     return this.products.findBySlug(slug);

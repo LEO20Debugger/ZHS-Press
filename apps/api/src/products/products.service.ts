@@ -110,6 +110,47 @@ export class ProductsService {
       }));
   }
 
+  /**
+   * The issue the magazine page leads with, or null.
+   *
+   * Editorial, not derived — an editor marks it, optionally with a last day.
+   * Null is a normal answer: between issues, or once a window has closed, the
+   * page simply shows no headline rather than silently promoting something
+   * nobody chose.
+   *
+   * The window is compared as a plain calendar string (`latest_until` is a
+   * DATE, and both sides are `YYYY-MM-DD`, which sorts lexicographically).
+   * Doing it in JS rather than SQL keeps it off the database clock, which in
+   * production is UTC and would end a window early for a US editor.
+   */
+  async getLatestIssue(): Promise<ProductSummary | null> {
+    const rows = await this.db.query.products.findMany({
+      where: and(
+        eq(schema.products.type, 'magazine'),
+        inArray(schema.products.status, [...PUBLIC_STATUSES]),
+      ),
+      with: { images: { orderBy: asc(schema.productImages.position), limit: 1 }, issue: true },
+    });
+
+    const today = new Date().toLocaleDateString('en-CA');
+    const live = rows.filter(
+      (row: any) =>
+        row.issue?.isLatest === true &&
+        (row.issue.latestUntil == null || String(row.issue.latestUntil) >= today),
+    );
+
+    /*
+      One issue should hold the flag — the admin clears the others on save.
+      If two ever do (a direct database edit, a restored backup), the higher
+      issue number wins so the page stays deterministic instead of depending
+      on row order.
+    */
+    live.sort((a: any, b: any) => (b.issue?.issueNumber ?? 0) - (a.issue?.issueNumber ?? 0));
+
+    const headline = live[0];
+    return headline ? this.toSummary(headline) : null;
+  }
+
   private orderBy(sort: ProductQuery['sort']) {
     switch (sort) {
       case 'oldest':
@@ -219,6 +260,8 @@ export class ProductsService {
             theme: row.issue.theme,
             editorNote: row.issue.editorNote,
             publishedDate: row.issue.publishedDate ? String(row.issue.publishedDate) : null,
+            isLatest: Boolean(row.issue.isLatest),
+            latestUntil: row.issue.latestUntil ? String(row.issue.latestUntil) : null,
             contributors: (row.contributors ?? []).map((link: any) => ({
               name: link.contributor.name,
               slug: link.contributor.slug,

@@ -1,5 +1,5 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { and, asc, count, desc, eq, like, or, sql, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, like, ne, or, sql, type SQL } from 'drizzle-orm';
 import { schema, type Database } from '@zhs/db';
 import { deriveTint, validateAccent, ACCENT_PALETTE } from '@zhs/ui';
 import type { UpsertProductInput } from '@zhs/shared';
@@ -154,12 +154,31 @@ export class AdminProductsService {
     if (input.type === 'magazine') {
       if (input.issue?.issueNumber == null) return;
 
+      const isLatest = input.issue.isLatest === true;
+
+      /*
+        Exactly one issue leads the magazine page. Clearing every other issue
+        first means promoting a new one demotes the old one automatically —
+        an editor should never have to remember to go and untick the last one,
+        and two issues both claiming to be the latest has no sane rendering.
+      */
+      if (isLatest) {
+        await this.db
+          .update(schema.magazineIssues)
+          .set({ isLatest: false, latestUntil: null })
+          .where(ne(schema.magazineIssues.productId, productId));
+      }
+
       const values = {
         productId,
         issueNumber: input.issue.issueNumber,
         theme: input.issue.theme ?? null,
         editorNote: input.issue.editorNote ?? null,
         publishedDate: input.issue.publishedDate ?? null,
+        isLatest,
+        // An end date without the flag is meaningless, and the schema rejects
+        // it — but never store one anyway.
+        latestUntil: isLatest ? (input.issue.latestUntil ?? null) : null,
       };
       await this.db
         .insert(schema.magazineIssues)

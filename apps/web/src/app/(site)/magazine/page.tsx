@@ -1,8 +1,9 @@
 import type { Metadata } from 'next';
+import Image from 'next/image';
 import Link from 'next/link';
 import { ProductGrid, productHref } from '@/components/product-card';
-import { Eyebrow, HandDrawnRule, Section } from '@/components/primitives';
-import { listIssues } from '@/lib/catalog';
+import { accentStyle, Eyebrow, HandDrawnRule, Section } from '@/components/primitives';
+import { getLatestIssue, listIssues } from '@/lib/catalog';
 
 export const metadata: Metadata = {
   title: 'Light magazine',
@@ -11,27 +12,23 @@ export const metadata: Metadata = {
 };
 
 export default async function MagazinePage() {
-  const issues = await listIssues();
+  /*
+    Which issue leads the page is an editorial decision made in the admin, with
+    an optional last day — not the newest issue by number. So it is fetched
+    rather than derived, and null is an ordinary answer: between issues, or
+    once a window has closed, the page simply opens on the listing.
+  */
+  const [issues, latest] = await Promise.all([listIssues(), getLatestIssue()]);
   const current = issues.filter((issue) => issue.status !== 'sold_out');
   const archive = issues.filter((issue) => issue.status === 'sold_out');
 
   /*
-    The latest issue is featured on its own rather than listed, so the grid
-    below carries whatever is left in print — usually nothing, sometimes the
-    next issue on preorder alongside the one on sale. Listing the featured
-    issue again directly underneath itself is the thing to avoid.
-
-    The teaser leads with an issue you can still buy, and only falls back to
-    the most recent one when nothing is currently in print.
+    Bands alternate tone, and which bands render depends on what is in print
+    and on whether an editor has set a headline, so each takes whichever tone
+    the section above it did not.
   */
-  const latest = current[0] ?? issues[0] ?? null;
-  const alsoAvailable = current.filter((issue) => issue.id !== latest?.id);
-
-  /*
-    Bands alternate tone, and which bands render varies with what is in print,
-    so the archive takes whichever tone the section above it did not.
-  */
-  const archiveTone = alsoAvailable.length > 0 ? 'deep' : latest ? 'paper' : 'deep';
+  const currentTone = latest ? 'paper' : 'deep';
+  const archiveTone = current.length > 0 ? (latest ? 'deep' : 'paper') : currentTone;
 
   return (
     <>
@@ -62,44 +59,70 @@ export default async function MagazinePage() {
 
       {latest ? (
         <Section tone="deep">
-          <div className="max-w-2xl">
-            <Eyebrow>The latest issue</Eyebrow>
-            <h2 className="mt-3 font-display text-h1">
-              {latest.title}
-              {latest.subtitle ? <span className="italic">: {latest.subtitle}</span> : null}
-            </h2>
-            {latest.blurb ? (
-              <p className="prose-editorial mt-4 text-ink-muted">{latest.blurb}</p>
-            ) : null}
-            <div className="mt-6 flex flex-wrap gap-6">
-              <Link href={productHref(latest)} className="link-underline text-small font-medium">
-                Shop the issue →
+          {/* The accent scopes to this band, so the cover sits on its own tint. */}
+          <div
+            style={accentStyle(latest.accent)}
+            className="grid items-center gap-10 md:grid-cols-[0.8fr_1fr] lg:gap-16"
+          >
+            {/*
+              The cover leads on the left and is capped, because its height
+              follows from its width — an uncapped column makes the artwork
+              taller than the fold and the crop reads as a fault.
+            */}
+            {latest.coverImage ? (
+              <Link
+                href={productHref(latest)}
+                className="order-1 block w-full max-w-[320px] md:order-none"
+              >
+                <div className="cover-mount bg-accent-tint">
+                  <Image
+                    src={latest.coverImage.url}
+                    alt={latest.coverImage.alt}
+                    width={latest.coverImage.width ?? 896}
+                    height={latest.coverImage.height ?? 1200}
+                    sizes="(min-width: 768px) 320px, 80vw"
+                    priority
+                  />
+                </div>
               </Link>
-              {archive.length > 0 ? (
-                <Link href="#archive" className="link-underline text-small font-medium">
-                  Explore the archive →
-                </Link>
+            ) : null}
+
+            <div className="max-w-2xl">
+              <Eyebrow>The latest issue</Eyebrow>
+              <h2 className="mt-3 font-display text-h1">
+                {latest.title}
+                {latest.subtitle ? <span className="italic">: {latest.subtitle}</span> : null}
+              </h2>
+              {latest.blurb ? (
+                <p className="prose-editorial mt-4 text-ink-muted">{latest.blurb}</p>
               ) : null}
+              <div className="mt-6 flex flex-wrap gap-6">
+                <Link href={productHref(latest)} className="link-underline text-small font-medium">
+                  {latest.purchasable ? 'Shop the issue' : 'Read about the issue'} →
+                </Link>
+                {archive.length > 0 ? (
+                  <Link href="#archive" className="link-underline text-small font-medium">
+                    Explore the archive →
+                  </Link>
+                ) : null}
+              </div>
             </div>
           </div>
         </Section>
       ) : null}
 
-      {alsoAvailable.length > 0 ? (
-        <Section tone={latest ? 'paper' : 'deep'}>
-          <h2 className="font-display text-h1">Also available</h2>
-          <div className="mt-10">
-            <ProductGrid products={alsoAvailable} />
-          </div>
-        </Section>
-      ) : null}
-
-      {/* Nothing in print at all — say so rather than showing an empty page. */}
-      {!latest ? (
-        <Section tone="deep">
-          <p className="font-editorial text-ink-muted">The next issue is on its way.</p>
-        </Section>
-      ) : null}
+      {/*
+        Every issue still in print, the headline one included. It appears twice
+        by design: once as the editor's headline, once in its place in the run.
+        A reader scanning the list should not find a gap where the issue they
+        just read about ought to be.
+      */}
+      <Section tone={currentTone}>
+        <h2 className="font-display text-h1">Current issues</h2>
+        <div className="mt-10">
+          <ProductGrid products={current} emptyMessage="The next issue is on its way." />
+        </div>
+      </Section>
 
       {/*
         Sold-out issues stay listed (brief 2.3). The back catalogue is a large

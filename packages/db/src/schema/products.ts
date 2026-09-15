@@ -106,6 +106,24 @@ export const magazineIssues = mysqlTable(
     /** Editor note, MDX. */
     editorNote: text('editor_note'),
     publishedDate: date('published_date', { mode: 'string' }),
+
+    /**
+     * The issue the magazine page leads with. Editorial, not derived: the
+     * newest issue by number is not always the one to put forward — a preorder
+     * may land before the issue on sale should stop being the headline.
+     *
+     * Only one issue is the latest at a time; setting this clears it elsewhere.
+     */
+    isLatest: boolean('is_latest').notNull().default(false),
+    /**
+     * Last day this stays the headline, inclusive. A calendar date rather than
+     * an instant, for the same reason as `published_date` — an editor means a
+     * day, and a timezone conversion must not shift it by one.
+     *
+     * NULL means indefinitely: until another issue takes over, or the flag is
+     * cleared by hand.
+     */
+    latestUntil: date('latest_until', { mode: 'string' }),
   },
   (t) => [uniqueIndex('magazine_issues_number_idx').on(t.issueNumber)],
 );

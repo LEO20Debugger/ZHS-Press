@@ -166,12 +166,26 @@ export const bookDetailsSchema = z.object({
   ageRange: optionalText(40),
 });
 
-export const magazineIssueSchema = z.object({
-  issueNumber: z.number().int().positive().max(10_000).optional(),
-  theme: optionalText(255),
-  editorNote: z.string().max(50_000).optional(),
-  publishedDate: z.string().date().optional(),
-});
+export const magazineIssueSchema = z
+  .object({
+    issueNumber: z.number().int().positive().max(10_000).optional(),
+    theme: optionalText(255),
+    editorNote: z.string().max(50_000).optional(),
+    publishedDate: z.string().date().optional(),
+    /** Leads the magazine page. Only one issue holds this at a time. */
+    isLatest: z.boolean().optional(),
+    /** Last day it leads, inclusive. Omitted means indefinitely. */
+    latestUntil: z.string().date().optional(),
+  })
+  /*
+   * An end date with nothing to end is a setting that silently does nothing —
+   * the editor thinks they have scheduled something and no page will ever
+   * read it. Better to refuse the save and say so.
+   */
+  .refine((issue) => issue.latestUntil == null || issue.isLatest === true, {
+    message: 'Set this as the latest issue before choosing how long it stays there',
+    path: ['latestUntil'],
+  });
 
 export const stationeryDetailsSchema = z.object({
   dimensions: optionalText(120),
