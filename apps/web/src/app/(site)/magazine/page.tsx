@@ -22,7 +22,18 @@ export default async function MagazinePage() {
   return (
     <>
       <div className="shell py-16 md:py-24">
-        <Eyebrow>Light / A ZHS Press publication</Eyebrow>
+        {/*
+          The masthead line: the title set as the wordmark — display serif
+          italic, mixed case — against the small-caps descriptor. Italic in the
+          eyebrow's own sans would just read as a wobble at this size, so the
+          word steps out of the eyebrow's casing and tracking entirely.
+        */}
+        <Eyebrow>
+          <em className="font-display text-body italic normal-case tracking-normal text-ink">
+            Light
+          </em>
+          <span className="mx-2">/</span>A ZHS Press publication
+        </Eyebrow>
         <h1 className="mt-4 max-w-3xl text-display">
           A magazine for the things that stay with us.
         </h1>
