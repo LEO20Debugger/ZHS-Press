@@ -88,10 +88,12 @@ export function Section({
 export function SectionHeading({
   eyebrow,
   title,
+  intro,
   action,
 }: {
   eyebrow?: string;
   title: string;
+  intro?: ReactNode;
   action?: { href: string; label: string };
 }) {
   return (
@@ -100,6 +102,7 @@ export function SectionHeading({
         {eyebrow ? <Eyebrow>{eyebrow}</Eyebrow> : null}
         <h2 className="mt-3 text-display">{title}</h2>
         <HandDrawnRule className="mt-4 max-w-[220px] text-accent" />
+        {intro ? <p className="prose-editorial mt-4 text-ink-muted">{intro}</p> : null}
       </div>
       {action ? (
         <Link href={action.href} className="link-underline text-small font-medium">

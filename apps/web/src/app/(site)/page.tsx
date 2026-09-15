@@ -52,15 +52,15 @@ export default async function HomePage() {
             </div>
 
             <p className="rise prose-editorial mt-6 text-ink-muted" style={{ '--rise-delay': '340ms' } as React.CSSProperties}>
-              ZHS Press publishes picture books for young readers, the literary arts magazine (
-              <em>Light</em>), and journals with covers by the artists we work with. Everything we
-              make is available here and on Amazon.
+              ZHS Press is an independent press publishing books, <em>Light</em> magazine, and
+              beautifully made stationery. We publish work we believe deserves to be read, shared,
+              returned to, and kept close.
             </p>
 
             <div className="rise mt-8 flex flex-wrap gap-4" style={{ '--rise-delay': '440ms' } as React.CSSProperties}>
-              <Button href="/shop">Visit the shop</Button>
+              <Button href="/shop">Explore the shop</Button>
               <Button href="/books" variant="outline">
-                Our books
+                Discover our books
               </Button>
             </div>
           </div>
@@ -121,8 +121,9 @@ export default async function HomePage() {
       <Section tone="deep">
         <Reveal>
         <SectionHeading
-          eyebrow="Books"
-          title="Picture books for young readers"
+          eyebrow="Featured releases"
+          title="What we're publishing"
+          intro="New books, new issues, and selected pieces from the ZHS Press catalogue."
           action={{ href: '/books', label: 'All books' }}
         />
         </Reveal>

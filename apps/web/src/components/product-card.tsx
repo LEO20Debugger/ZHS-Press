@@ -18,6 +18,12 @@ export function productHref(product: Pick<ProductSummary, 'slug' | 'type'>): str
   }
 }
 
+/** The card's view cue names what it opens, so the shop grid doesn't call a journal a book. */
+const VIEW_LABELS: Partial<Record<ProductSummary['type'], string>> = {
+  book: 'View book',
+  magazine: 'View issue',
+};
+
 function StatusSticker({ status }: { status: ProductSummary['status'] }) {
   switch (status) {
     case 'coming_soon':
@@ -100,6 +106,21 @@ export function ProductCard({ product }: { product: ProductSummary }) {
               ) : null}
             </>
           )}
+        </p>
+
+        {/*
+          The visible "view" affordance. Deliberately not a link: the title
+          already stretches a link over the whole card, so a second link to the
+          same page would just be a duplicate stop for keyboard and screen
+          reader users. aria-hidden leaves it as the visual cue it is, and a
+          click anywhere on the card — this cue included — still follows the
+          title link.
+        */}
+        <p
+          aria-hidden
+          className="mt-3 font-ui text-small font-medium text-ink-muted transition-colors duration-base group-hover:text-ink"
+        >
+          {VIEW_LABELS[product.type] ?? 'View item'} →
         </p>
 
         {/*
