@@ -27,17 +27,18 @@ export default async function BooksPage() {
         </p>
 
         {/*
-          An in-page jump, not a link to /books — that is this page. The full
-          catalogue is the grid directly below, so the CTA takes you to it.
+          The arrow means a route change everywhere else on the site, so it
+          goes somewhere: the same titles in the shop, where they can be
+          sorted and filtered. This page stays the editorial front door.
         */}
         <p className="mt-6">
-          <Link href="#all-books" className="link-underline text-small font-medium">
+          <Link href="/shop?category=book" className="link-underline text-small font-medium">
             Browse all books →
           </Link>
         </p>
       </div>
 
-      <div id="all-books" className="shell scroll-mt-24 pb-24">
+      <div className="shell pb-24">
         <ProductGrid products={items} emptyMessage="No titles listed yet." />
       </div>
     </>
