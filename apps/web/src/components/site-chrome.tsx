@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { LogoMark } from './logo-mark';
 import { LogoTagline } from './logo-tagline';
 import { CartCount } from './cart-count';
-import { HandDrawnRule } from './primitives';
+import { Eyebrow, HandDrawnRule } from './primitives';
 import { NewsletterForm } from './newsletter-form';
 
 const NAV = [
@@ -90,11 +90,12 @@ export function SiteFooter() {
       <div className="shell py-16">
         <div className="grid gap-12 md:grid-cols-[1.2fr_1fr_1fr]">
           <div>
-            <h2 className="font-display text-h2">Stay in the light.</h2>
+            <Eyebrow>The ZHS Press letter</Eyebrow>
+            <h2 className="mt-3 font-display text-h2">Stay close to what we&rsquo;re publishing.</h2>
             <HandDrawnRule className="mt-3 max-w-[180px] text-terracotta" />
             <p className="mt-4 max-w-sm font-editorial text-small text-ink-muted">
-              New titles, new issues, and the occasional look at what we are working on. No more
-              than once a month.
+              New books, new issues of <em>Light</em>, stationery, and occasional notes from the
+              world of ZHS Press. Just the things worth knowing about.
             </p>
             <div className="mt-6 max-w-sm">
               <NewsletterForm source="footer" />

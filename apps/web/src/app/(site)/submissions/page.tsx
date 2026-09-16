@@ -21,12 +21,13 @@ export default function SubmissionsPage() {
     <>
       <div className="shell py-16 md:py-24">
         <Eyebrow>Submissions</Eyebrow>
-        <h1 className="mt-4 max-w-3xl text-display">We read every submission.</h1>
+        <h1 className="mt-4 max-w-3xl text-display">Have something to say?</h1>
         <HandDrawnRule className="mt-6 max-w-[240px] text-terracotta" />
         <p className="prose-editorial mt-6">
-          ZHS Press accepts manuscripts and pitches year round. You do not need an agent, and you
-          do not need to have been published before. We are a small team, so a reply usually takes
-          six to eight weeks.
+          ZHS Press welcomes manuscripts and pitches from writers working across fiction,
+          non-fiction, children&rsquo;s books, and literary work. You don&rsquo;t need an agent. You
+          don&rsquo;t need to have been published before. You simply need a piece of work you
+          believe in.
         </p>
       </div>
 

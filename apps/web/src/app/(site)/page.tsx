@@ -162,8 +162,9 @@ export default async function HomePage() {
         <Reveal>
         <SectionHeading
           eyebrow="Stationery"
-          title="Journals with artist covers"
-          action={{ href: '/shop?category=stationery', label: 'All stationery' }}
+          title="For the ideas that start on paper."
+          intro="Our stationery brings the work of artists we admire onto the things we use every day. Start a journal, keep a thought, sketch an idea, or simply give yourself somewhere to put it down."
+          action={{ href: '/shop?category=stationery', label: 'Shop stationery' }}
         />
         </Reveal>
         <Reveal delay={80}>
@@ -174,14 +175,15 @@ export default async function HomePage() {
       <Section tone="ink">
         <div className="grid gap-10 md:grid-cols-2 md:items-center">
           <Reveal>
-            <h2 className="font-display text-display">We read every submission.</h2>
+            <h2 className="font-display text-display">Have something to say?</h2>
             <HandDrawnRule className="mt-4 max-w-[200px] text-sand" />
           </Reveal>
           <Reveal delay={100}>
             <p className="prose-editorial text-paper-deep">
-              ZHS Press accepts manuscripts and pitches for fiction, non-fiction, children&rsquo;s
-              books and literary work. You do not need an agent, and you do not need to have been
-              published before.
+              ZHS Press welcomes manuscripts and pitches from writers working across fiction,
+              non-fiction, children&rsquo;s books, and literary work. You don&rsquo;t need an agent.
+              You don&rsquo;t need to have been published before. You simply need a piece of work
+              you believe in.
             </p>
             <div className="mt-7">
               <Link

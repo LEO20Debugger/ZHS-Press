@@ -68,13 +68,18 @@ export default async function MagazinePage() {
               The cover leads on the left and is capped, because its height
               follows from its width — an uncapped column makes the artwork
               taller than the fold and the crop reads as a fault.
+
+              The mount is always rendered, never conditional on there being an
+              artwork. An issue with no cover uploaded then reads as missing
+              artwork, which is what it is, instead of collapsing to a
+              text-only band that looks exactly like the feature not shipping.
             */}
-            {latest.coverImage ? (
-              <Link
-                href={productHref(latest)}
-                className="order-1 block w-full max-w-[320px] md:order-none"
-              >
-                <div className="cover-mount bg-accent-tint">
+            <Link
+              href={productHref(latest)}
+              className="order-1 block w-full max-w-[320px] md:order-none"
+            >
+              <div className="cover-mount bg-accent-tint">
+                {latest.coverImage ? (
                   <Image
                     src={latest.coverImage.url}
                     alt={latest.coverImage.alt}
@@ -83,9 +88,13 @@ export default async function MagazinePage() {
                     sizes="(min-width: 768px) 320px, 80vw"
                     priority
                   />
-                </div>
-              </Link>
-            ) : null}
+                ) : (
+                  <div className="flex h-full items-center justify-center p-6 text-center font-display text-h3 italic text-ink-muted">
+                    {latest.title}
+                  </div>
+                )}
+              </div>
+            </Link>
 
             <div className="max-w-2xl">
               <Eyebrow>The latest issue</Eyebrow>

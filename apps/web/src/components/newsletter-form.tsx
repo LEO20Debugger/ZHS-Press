@@ -56,7 +56,7 @@ export function NewsletterForm({ source = 'site' }: { source?: string }) {
       <div className="flex items-end gap-3 border-b border-ink pb-2">
         <div className="flex-1">
           <label htmlFor={`newsletter-${source}`} className="sr-only">
-            Email address
+            Your email address
           </label>
           <input
             id={`newsletter-${source}`}
@@ -64,7 +64,7 @@ export function NewsletterForm({ source = 'site' }: { source?: string }) {
             type="email"
             required
             autoComplete="email"
-            placeholder="your@email.com"
+            placeholder="Your email address"
             className="w-full bg-transparent font-ui text-small text-ink placeholder:text-ink-muted focus:outline-none"
           />
         </div>
@@ -73,7 +73,7 @@ export function NewsletterForm({ source = 'site' }: { source?: string }) {
           disabled={state === 'submitting'}
           className="font-ui text-caption uppercase tracking-wide disabled:opacity-50"
         >
-          {state === 'submitting' ? 'Sending…' : 'Sign up'}
+          {state === 'submitting' ? 'Sending…' : 'Subscribe'}
         </button>
       </div>
 
