@@ -32,6 +32,36 @@ async function apiGet<T>(path: string): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+/**
+ * A GET whose endpoint may legitimately answer "there isn't one".
+ *
+ * Nest serialises a `null` return as an EMPTY body — zero bytes, not the four
+ * characters `null` — so `response.json()` throws `Unexpected end of JSON
+ * input` rather than giving back null. During a static build that surfaces as
+ * a prerender failure, not a runtime blip, so it takes the whole deploy down.
+ *
+ * Deliberately separate from `apiGet` rather than folding the tolerance into
+ * it: everywhere else an empty body really is a fault, and it should keep
+ * throwing instead of quietly becoming null.
+ */
+async function apiGetOptional<T>(path: string): Promise<T | null> {
+  const response = await fetch(`${API_BASE_URL}/api${path}`, {
+    next: { revalidate: REVALIDATE_SECONDS, tags: ['catalog'] },
+    headers: { accept: 'application/json' },
+  });
+
+  if (response.status === 204) return null;
+
+  if (!response.ok) {
+    throw new Error(`API ${response.status} for ${path}`);
+  }
+
+  const body = await response.text();
+  if (body.trim() === '') return null;
+
+  return JSON.parse(body) as T;
+}
+
 export interface ListOptions {
   category?: ProductType;
   featured?: boolean;
@@ -140,7 +170,7 @@ export async function getLatestIssue(): Promise<ProductSummary | null> {
     return summary;
   }
 
-  return apiGet<ProductSummary | null>('/products/issues/latest');
+  return apiGetOptional<ProductSummary>('/products/issues/latest');
 }
 
 /**
