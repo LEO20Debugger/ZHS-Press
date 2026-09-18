@@ -42,6 +42,18 @@ function Svg({
   );
 }
 
+/**
+ * Close. The one glyph here that is not decorative: it sits in a button with
+ * no text, so that button carries the label.
+ */
+export function IconClose(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="m6 6 12 12M18 6 6 18" />
+    </Svg>
+  );
+}
+
 /** Home: a house, because on a phone the logo is a small mark to aim at. */
 export function IconHome(props: IconProps) {
   return (

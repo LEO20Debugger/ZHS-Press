@@ -88,6 +88,24 @@
   --radius-md: 4px;
   --radius-pill: 999px;
 
+  /* ---- Elevation --------------------------------------------------------
+   * One shadow, and a warm one. The tint is --ink — a green-tinted near-black
+   * — at low alpha, never grey: a grey shadow on an oat ground is exactly the
+   * "default Tailwind" tell this palette exists to avoid.
+   *
+   * Deliberately not for cards. A cover sits on its own accent tint and takes
+   * its separation from that; this is for surfaces that genuinely float above
+   * the page and have to be read as detached from it. The phone menu is the
+   * only one today.
+   *
+   * The triplet restates --ink because CSS cannot decompose a hex custom
+   * property into channels. The two are meant to stay in step.
+   */
+  --ink-rgb: 30 37 37;
+  --shadow-panel:
+    0 1px 2px rgb(var(--ink-rgb) / 0.04),
+    0 20px 48px -24px rgb(var(--ink-rgb) / 0.38);
+
   /* ---- Motion — gentle and short, always short -------------------------- */
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --duration-fast: 120ms;

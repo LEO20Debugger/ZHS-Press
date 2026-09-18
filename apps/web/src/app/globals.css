@@ -480,3 +480,97 @@
     transform: none !important;
   }
 }
+
+/*
+ * The phone menu's motion.
+ *
+ * Keyframes rather than transitions, because the panel is inside a <details>:
+ * its content does not exist in the layout until the element is open, so there
+ * is no "before" state for a transition to start from. An animation runs from
+ * the moment the content appears, which is exactly the moment we want it.
+ *
+ * The exit is the harder half — the browser removes the content the instant
+ * `open` flips to false, with no chance to animate. MobileMenu holds `open`
+ * true through `data-closing`, plays this, and only then lets it close.
+ *
+ * Short and small: 200ms in, a touch faster out, an 8px rise and a hair of
+ * scale from the corner the panel belongs to. Anything longer or larger stops
+ * reading as the menu arriving and starts reading as an effect. Everything
+ * here is disabled wholesale under prefers-reduced-motion by tokens.css.
+ */
+@keyframes menu-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.985);
+  }
+}
+
+@keyframes menu-panel-out {
+  to {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.99);
+  }
+}
+
+@keyframes menu-item-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes menu-backdrop-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@layer components {
+  .menu-panel {
+    /* From the corner it is anchored to, so it grows out of the button. */
+    transform-origin: top right;
+    animation: menu-panel-in var(--duration-base) var(--ease-out) both;
+  }
+
+  /*
+   * Hidden explicitly when the menu is shut, rather than trusting <details> to
+   * do it.
+   *
+   * A closed <details> normally skips painting its content, but this panel is
+   * absolutely positioned and carries a running animation, and Chrome keeps it
+   * on screen anyway — whereupon the entry animation replays and fades the
+   * closed menu back to full opacity, leaving it sitting over the page with
+   * nothing able to dismiss it. The element must be out of the render tree
+   * between openings, and only saying so guarantees it.
+   *
+   * Scoped to :not([open]) so it never fires mid-exit, when the element is
+   * deliberately still open with the closing animation running.
+   */
+  details:not([open]) > .menu-panel {
+    display: none;
+  }
+
+  .menu-panel[data-closing='true'] {
+    animation: menu-panel-out var(--duration-fast) var(--ease-out) forwards;
+  }
+
+  /*
+   * The rows arrive just behind the panel, each a beat after the one above.
+   * 25ms is small enough to read as one movement with a grain to it rather
+   * than as seven separate animations.
+   */
+  .menu-item {
+    animation: menu-item-in var(--duration-base) var(--ease-out) both;
+    animation-delay: calc(var(--menu-index, 0) * 25ms);
+  }
+
+  /* On the way out the panel goes as one piece; staggering it twice reads as
+     hesitation. */
+  .menu-panel[data-closing='true'] .menu-item {
+    animation: none;
+  }
+
+  .menu-backdrop {
+    animation: menu-backdrop-in var(--duration-fast) var(--ease-out) both;
+  }
+}

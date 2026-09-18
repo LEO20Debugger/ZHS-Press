@@ -83,6 +83,10 @@ const config: Config = {
         tight: 'var(--tracking-tight)',
         wide: 'var(--tracking-wide)',
       },
+      boxShadow: {
+        /** The one elevation in the system — see tokens.css. */
+        panel: 'var(--shadow-panel)',
+      },
       transitionTimingFunction: {
         out: 'var(--ease-out)',
       },
