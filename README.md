@@ -117,15 +117,3 @@ Full walkthrough, including seeding the first admin account: **[docs/deploying-t
 storefront reads from the API, which needs a database with a catalogue in it. Until
 that exists, production will error rather than quietly serve invented products — which
 is deliberate, but it does mean the database has to come first.
-
-## Open items
-
-Tracked in the project plan; all are blocked on people rather than code.
-
-1. **Flutterwave USD** — confirm the merchant account can collect *and* settle USD,
-   and which API version it is provisioned for. Blocks checkout work.
-2. **light4ph.org TLS certificate has expired** — the magazine redirect cannot be set
-   up until it is renewed or DNS is repointed here.
-3. **Release dates** — the brief targets Q2/Q3 2025, which has passed.
-4. **Illustration** — who supplies the art, and under what licence. The palette and
-   type give a warm shell; the character comes from illustration.
