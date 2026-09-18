@@ -52,7 +52,7 @@ export default async function HomePage() {
             </div>
 
             <p className="rise prose-editorial mt-6 text-ink-muted" style={{ '--rise-delay': '340ms' } as React.CSSProperties}>
-              ZHS Press is an independent press publishing books, <em>Light</em> magazine, and
+              ZHS Press is an independent press publishing books, a magazine, and
               beautifully made stationery. We publish work we believe deserves to be read, shared,
               returned to, and kept close.
             </p>
