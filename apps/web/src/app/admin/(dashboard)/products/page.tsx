@@ -8,6 +8,7 @@ import {
   useHasHover,
   type PreviewTarget,
 } from '@/components/admin/cover-preview';
+import { StockStepper } from '@/components/admin/stock-stepper';
 import { Button, Eyebrow, HandDrawnRule } from '@/components/primitives';
 
 interface Row {
@@ -49,6 +50,27 @@ export default function AdminProductsPage() {
     }, 250);
     return () => clearTimeout(timer);
   }, [search]);
+
+  /*
+   * Folds a settled stock change back into the row.
+   *
+   * The status comes back with it because a restock past zero clears `sold_out`
+   * server-side — the pill two columns over has to follow, or the table shows a
+   * title as sold out while its own stock column says there are twelve.
+   */
+  function applyStock(id: number, next: { quantity: number; status?: string }) {
+    setRows((prev) =>
+      prev.map((row) =>
+        row.id === id
+          ? {
+              ...row,
+              inventory: { quantity: next.quantity },
+              status: next.status ?? row.status,
+            }
+          : row,
+      ),
+    );
+  }
 
   return (
     <div>
@@ -144,7 +166,12 @@ export default function AdminProductsPage() {
                   </td>
                   <td className="py-3 pr-4">{formatMoney(row.priceCents, 'USD')}</td>
                   <td className="hidden py-3 pr-4 text-ink-muted sm:table-cell">
-                    {row.inventory?.quantity ?? '—'}
+                    <StockStepper
+                      productId={row.id}
+                      title={row.title}
+                      quantity={row.inventory?.quantity ?? null}
+                      onChange={(next) => applyStock(row.id, next)}
+                    />
                   </td>
                   <td className="hidden py-3 sm:table-cell">
                     {row.amazonUrl ? (

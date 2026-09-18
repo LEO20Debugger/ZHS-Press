@@ -7,7 +7,7 @@ import { listProducts } from '@/lib/catalog';
 
 export const metadata: Metadata = {
   title: 'Shop',
-  description: 'Books, Light magazine issues, and stationery from ZHS Press. Worldwide delivery.',
+  description: 'Books, LIGHT magazine issues, and stationery from ZHS Press. Worldwide delivery.',
 };
 
 const FILTERS = [
@@ -57,7 +57,7 @@ export default async function ShopPage({ searchParams }: { searchParams: SearchP
         <h1 className="mt-4 text-display">Everything we make, in one place.</h1>
         <HandDrawnRule className="mt-5 max-w-[220px] text-terracotta" />
         <p className="prose-editorial mt-5 text-ink-muted">
-          Books, issues of <em>Light</em>, and journals. Prices in USD, delivered worldwide.
+          Books, issues of <em>LIGHT</em>, and journals. Prices in USD, delivered worldwide.
         </p>
       </div>
 

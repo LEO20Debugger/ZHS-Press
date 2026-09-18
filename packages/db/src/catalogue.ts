@@ -150,7 +150,7 @@ export const CATALOGUE: CatalogueEntry[] = [
     slug: 'light-issue-4',
     type: 'magazine',
     status: 'available',
-    title: 'Light, Issue Four',
+    title: 'LIGHT, Issue Four',
     subtitle: 'Inheritance',
     blurb:
       'What gets handed down that nobody chose to hand down. Twenty-two writers and artists on inheritance.',
@@ -174,7 +174,7 @@ export const CATALOGUE: CatalogueEntry[] = [
     type: 'magazine',
     // Sold out, not archived: the issue stays browsable in the archive.
     status: 'sold_out',
-    title: 'Light, Issue Three',
+    title: 'LIGHT, Issue Three',
     subtitle: 'Repair',
     blurb: 'On mending, and on the things that are better for having been broken.',
     priceCents: 1200,
@@ -189,7 +189,7 @@ export const CATALOGUE: CatalogueEntry[] = [
     slug: 'light-issue-2',
     type: 'magazine',
     status: 'sold_out',
-    title: 'Light, Issue Two',
+    title: 'LIGHT, Issue Two',
     subtitle: 'Thresholds',
     blurb: 'Doorways, waiting rooms, and the minute before the news.',
     priceCents: 1000,

@@ -179,7 +179,7 @@ ${bodyHtml}
 </td></tr>
 
 <tr><td style="padding-top:16px;font-family:${UI_STACK};font-size:12px;line-height:1.6;color:${INK_MUTED};">
-ZHS Press — books, <em>Light</em> magazine, and stationery.
+ZHS Press — books, <em>LIGHT</em> magazine, and stationery.
 </td></tr>
 
 </table>
@@ -248,7 +248,7 @@ export function newsletterConfirmation({ confirmUrl }: { confirmUrl: string }): 
     html: shell(
       heading('One click and you are on the list') +
         paragraph(
-          'We send a note when a book or an issue of <em>Light</em> is on its way — ' +
+          'We send a note when a book or an issue of <em>LIGHT</em> is on its way — ' +
             'not often, and never anything else.',
         ) +
         button(confirmUrl, 'Confirm subscription') +
@@ -258,7 +258,7 @@ export function newsletterConfirmation({ confirmUrl }: { confirmUrl: string }): 
     text: [
       'One click and you are on the list.',
       '',
-      'We send a note when a book or an issue of Light is on its way — not often,',
+      'We send a note when a book or an issue of LIGHT is on its way — not often,',
       'and never anything else.',
       '',
       'Confirm your subscription:',
@@ -278,7 +278,7 @@ export function newsletterWelcome({ unsubscribeUrl }: { unsubscribeUrl: string }
       heading('You are on the list') +
         paragraph(
           'Thank you. You will hear from us when there is something worth hearing about — ' +
-            'a new book, an issue of <em>Light</em>, something for the desk.',
+            'a new book, an issue of <em>LIGHT</em>, something for the desk.',
         ) +
         muted(`Changed your mind? <a href="${esc(unsubscribeUrl)}" style="color:${INK_MUTED};">Unsubscribe</a>.`),
       { preheader: 'Your subscription is confirmed.' },
@@ -287,7 +287,7 @@ export function newsletterWelcome({ unsubscribeUrl }: { unsubscribeUrl: string }
       'You are on the list.',
       '',
       'Thank you. You will hear from us when there is something worth hearing about —',
-      'a new book, an issue of Light, something for the desk.',
+      'a new book, an issue of LIGHT, something for the desk.',
       '',
       `Unsubscribe: ${unsubscribeUrl}`,
       '',

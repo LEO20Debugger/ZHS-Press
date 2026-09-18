@@ -3,7 +3,7 @@ import { Eyebrow, HandDrawnRule, Section } from '@/components/primitives';
 
 export const metadata: Metadata = {
   title: 'About',
-  description: 'ZHS Press is an independent press publishing books, Light magazine, and stationery.',
+  description: 'ZHS Press is an independent press publishing books, LIGHT magazine, and stationery.',
 };
 
 export default function AboutPage() {
@@ -34,9 +34,9 @@ export default function AboutPage() {
       <Section tone="deep">
         <div className="grid gap-12 md:grid-cols-2">
           <div>
-            <h2 className="font-display text-h1">Light</h2>
+            <h2 className="font-display text-h1">LIGHT</h2>
             <p className="prose-editorial mt-4 text-ink-muted">
-              <em>Light</em> is our literary arts magazine, exploring health, creativity and
+              <em>LIGHT</em> is our literary arts magazine, exploring health, creativity and
               storytelling. It began in 2020 and is now published entirely by ZHS Press.
             </p>
           </div>

@@ -240,7 +240,7 @@ function typeLabel(product: ProductDetail): string {
     case 'book':
       return 'Book';
     case 'magazine':
-      return 'Light magazine';
+      return 'LIGHT magazine';
     default:
       return 'Stationery';
   }

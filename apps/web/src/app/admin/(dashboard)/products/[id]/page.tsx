@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { formatMoney, parseMoneyToCents, upsertProductSchema } from '@zhs/shared';
 import { AccentPicker } from '@/components/admin/accent-picker';
+import { Modal } from '@/components/admin/modal';
 import { ProductContributors } from '@/components/admin/product-contributors';
 import { ProductImages } from '@/components/admin/product-images';
 import { Button, Eyebrow, HandDrawnRule } from '@/components/primitives';
@@ -147,6 +148,14 @@ export default function ProductEditPage({ params }: { params: Promise<{ id: stri
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [message, setMessage] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  /*
+   * Confirmation of a save, held open until it is acknowledged. Closing it by
+   * any route — the button, Escape, the backdrop — leaves for the catalogue,
+   * so the admin never lands back on a form whose work is already committed.
+   */
+  const [savedOpen, setSavedOpen] = useState(false);
+  const [leaving, setLeaving] = useState(false);
   const [loading, setLoading] = useState(!isNew);
   const [images, setImages] = useState<Array<{ id: number; url: string; alt: string; position: number }>>([]);
 
@@ -344,11 +353,19 @@ export default function ProductEditPage({ params }: { params: Promise<{ id: stri
       return;
     }
 
-    if (isNew) {
-      router.replace(`/admin/products/${result.id}`);
-    } else {
-      setMessage('Saved.');
-    }
+    setSavedOpen(true);
+  }
+
+  /*
+   * The catalogue is refreshed rather than merely navigated to: it is a server
+   * component, and without this the admin can arrive back at a cached list
+   * still showing the title, price or status they just changed.
+   */
+  function leaveToCatalogue() {
+    setLeaving(true);
+    setSavedOpen(false);
+    router.push('/admin/products');
+    router.refresh();
   }
 
   if (loading) return <p className="text-small text-ink-muted">Loading…</p>;
@@ -706,7 +723,7 @@ export default function ProductEditPage({ params }: { params: Promise<{ id: stri
         ) : null}
 
         {message ? (
-          <p role="status" className={`text-small ${message === 'Saved.' ? 'text-moss' : 'text-danger'}`}>
+          <p role="status" className="text-small text-danger">
             {message}
           </p>
         ) : null}
@@ -722,6 +739,25 @@ export default function ProductEditPage({ params }: { params: Promise<{ id: stri
           ) : null}
         </div>
       </form>
+
+      <Modal open={savedOpen} onClose={leaveToCatalogue} title="Saved">
+        <div className="p-8">
+          <Eyebrow>Catalogue</Eyebrow>
+          <h2 className="mt-3 font-display text-display">
+            {isNew ? 'Product created' : 'Changes saved'}
+          </h2>
+          <HandDrawnRule className="mt-4 max-w-[140px] text-moss" />
+          <p className="prose-editorial mt-5 text-small text-ink-muted">
+            {form.title ? `“${form.title}”` : 'This product'}{' '}
+            {isNew ? 'is now in the catalogue.' : 'is up to date.'}
+          </p>
+          <div className="mt-7">
+            <Button type="button" onClick={leaveToCatalogue} disabled={leaving}>
+              {leaving ? 'Returning…' : 'Back to catalogue'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

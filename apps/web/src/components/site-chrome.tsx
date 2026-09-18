@@ -94,7 +94,7 @@ export function SiteFooter() {
             <h2 className="mt-3 font-display text-h2">Stay close to what we&rsquo;re publishing.</h2>
             <HandDrawnRule className="mt-3 max-w-[180px] text-terracotta" />
             <p className="mt-4 max-w-sm font-editorial text-small text-ink-muted">
-              New books, new issues of <em>Light</em>, stationery, and occasional notes from the
+              New books, new issues of <em>LIGHT</em>, stationery, and occasional notes from the
               world of ZHS Press. Just the things worth knowing about.
             </p>
             <div className="mt-6 max-w-sm">
@@ -160,7 +160,7 @@ export function SiteFooter() {
         <div className="mt-8 flex flex-wrap items-center justify-between gap-4 text-caption text-ink-muted">
           <p>© {new Date().getFullYear()} ZHS Press. All rights reserved.</p>
           <p>
-            <em className="font-editorial">Light</em> is published by ZHS Press.
+            <em className="font-editorial">LIGHT</em> is published by ZHS Press.
           </p>
         </div>
       </div>

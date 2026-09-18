@@ -23,9 +23,11 @@ import { Inject } from '@nestjs/common';
 import { schema, type Database } from '@zhs/db';
 import {
   addProductImageSchema,
+  adjustInventorySchema,
   attachContributorSchema,
   upsertProductSchema,
   type AddProductImageInput,
+  type AdjustInventoryInput,
   type AttachContributorInput,
   type ContributorRole,
   type UpsertProductInput,
@@ -315,10 +317,10 @@ export class AdminController {
   @Patch('products/:id/inventory')
   setInventory(
     @Param('id', ParseIntPipe) id: number,
-    @Body('quantity', ParseIntPipe) quantity: number,
+    @Body(new ZodValidationPipe(adjustInventorySchema)) body: AdjustInventoryInput,
     @Req() request: AuthenticatedRequest,
   ) {
-    return this.products.setInventory(id, quantity, request.admin!);
+    return this.products.setInventory(id, body, request.admin!);
   }
 
   /** Archives rather than deletes; past orders must keep their references. */

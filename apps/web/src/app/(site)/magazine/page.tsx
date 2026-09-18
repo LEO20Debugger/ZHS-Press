@@ -6,9 +6,9 @@ import { accentStyle, Eyebrow, HandDrawnRule, Section } from '@/components/primi
 import { getLatestIssue, listIssues } from '@/lib/catalog';
 
 export const metadata: Metadata = {
-  title: 'Light magazine',
+  title: 'LIGHT magazine',
   description:
-    'Light is a literary arts magazine about health, creativity and storytelling, published by ZHS Press.',
+    'LIGHT is a literary arts magazine about health, creativity and storytelling, published by ZHS Press.',
 };
 
 export default async function MagazinePage() {
@@ -41,7 +41,7 @@ export default async function MagazinePage() {
         */}
         <Eyebrow>
           <em className="font-display text-body italic normal-case tracking-normal text-ink">
-            Light
+            LIGHT
           </em>
           <span className="mx-2">/</span>A ZHS Press publication
         </Eyebrow>
@@ -50,7 +50,7 @@ export default async function MagazinePage() {
         </h1>
         <HandDrawnRule className="mt-5 max-w-[220px] text-ink-blue" />
         <p className="prose-editorial mt-6">
-          <em>Light</em> is ZHS Press&rsquo;s literary arts magazine, bringing together writing and
+          <em>LIGHT</em> is ZHS Press&rsquo;s literary arts magazine, bringing together writing and
           creative work around themes of health, creativity, storytelling, and the ways we make
           sense of being human. Each issue brings together new perspectives, thoughtful work, and
           creative voices around a central theme.

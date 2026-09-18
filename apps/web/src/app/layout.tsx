@@ -40,11 +40,11 @@ const newsreader = Newsreader({
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.WEB_BASE_URL ?? 'https://zhspress.org'),
   title: {
-    default: 'ZHS Press — books, Light magazine, and stationery',
+    default: 'ZHS Press — books, LIGHT magazine, and stationery',
     template: '%s · ZHS Press',
   },
   description:
-    'An independent press publishing picture books, the literary magazine Light, and artist-designed stationery.',
+    'An independent press publishing picture books, the literary magazine LIGHT, and artist-designed stationery.',
   openGraph: {
     type: 'website',
     siteName: 'ZHS Press',

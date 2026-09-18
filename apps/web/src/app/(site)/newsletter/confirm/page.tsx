@@ -26,7 +26,7 @@ export default async function ConfirmPage({
           copy={{
             heading: 'Almost there',
             intro:
-              'One click and you are on the list. We write when there is a new book, an issue of Light, or something new for the desk.',
+              'One click and you are on the list. We write when there is a new book, an issue of LIGHT, or something new for the desk.',
             action: 'Confirm subscription',
             doneHeading: 'You are on the list.',
             doneBody:

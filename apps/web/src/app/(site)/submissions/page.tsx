@@ -39,7 +39,7 @@ export default function SubmissionsPage() {
               <li>Fiction</li>
               <li>Non-fiction</li>
               <li>Children&rsquo;s books, picture books through middle grade</li>
-              <li>Poetry and literary work, including for Light</li>
+              <li>Poetry and literary work, including for LIGHT</li>
             </ul>
           </div>
           <div>

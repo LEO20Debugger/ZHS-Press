@@ -68,7 +68,7 @@ export default function CartPage() {
         <h1 className="mt-4 text-display">Your cart is empty.</h1>
         <HandDrawnRule className="mt-5 max-w-[200px] text-terracotta" />
         <p className="prose-editorial mt-6 text-ink-muted">
-          Nothing in here yet. The shop has our books, issues of <em>Light</em>, and journals.
+          Nothing in here yet. The shop has our books, issues of <em>LIGHT</em>, and journals.
         </p>
         <div className="mt-8">
           <Button href="/shop">Visit the shop</Button>

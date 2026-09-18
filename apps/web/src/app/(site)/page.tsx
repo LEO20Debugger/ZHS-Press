@@ -52,7 +52,7 @@ export default async function HomePage() {
             </div>
 
             <p className="rise prose-editorial mt-6 text-ink-muted" style={{ '--rise-delay': '340ms' } as React.CSSProperties}>
-              ZHS Press is an independent press publishing books, <em>Light</em> magazine, and
+              ZHS Press is an independent press publishing books, a magazine, and
               beautifully made stationery. We publish work we believe deserves to be read, shared,
               returned to, and kept close.
             </p>
@@ -140,11 +140,11 @@ export default async function HomePage() {
         <div className="grid gap-12 lg:grid-cols-[1fr_1.3fr]">
           <Reveal>
             <Eyebrow>The magazine</Eyebrow>
-            <h2 className="mt-3 font-display text-display italic">Light</h2>
+            <h2 className="mt-3 font-display text-display italic">LIGHT</h2>
             <HandDrawnRule className="mt-4 max-w-[160px] text-ink-blue" />
             <p className="prose-editorial mt-5 text-ink-muted">
               A literary arts magazine about health, creativity and storytelling. Two themed issues
-              a year, drawn from an open call. <em>Light</em> is published by ZHS Press.
+              a year, drawn from an open call. <em>LIGHT</em> is published by ZHS Press.
             </p>
             <div className="mt-7">
               <Button href="/magazine" variant="outline">

@@ -490,17 +490,75 @@ export class AdminProductsService {
     return this.findOne(productId);
   }
 
-  async setInventory(id: number, quantity: number, actor: AdminPrincipal) {
-    await this.findOne(id);
-    await this.db
-      .insert(schema.inventory)
-      .values({ productId: id, quantity })
-      .onDuplicateKeyUpdate({ set: { quantity } });
+  /**
+   * Sets or adjusts the stock held for a product.
+   *
+   * `delta` is applied as arithmetic in SQL rather than read-modify-write, so a
+   * checkout settling in the same moment cannot be undone by the admin's click:
+   * "add three" means three more than whatever the row holds when it lands, not
+   * three more than what the catalogue happened to render. `GREATEST(…, 0)`
+   * mirrors the checkout decrement — stock has no meaningful negative.
+   *
+   * Restocking past zero also clears `sold_out`, because the pair is what the
+   * storefront actually reads: the checkout flips that status on the sale that
+   * empties the shelf, and leaving it set would keep a restocked title hidden
+   * until someone noticed and edited it by hand. Only `sold_out` is cleared —
+   * a draft or archived title has been held back deliberately, and arriving
+   * stock is not a reason to publish it.
+   */
+  async setInventory(
+    id: number,
+    change: { quantity?: number; delta?: number },
+    actor: AdminPrincipal,
+  ) {
+    const before = await this.findOne(id);
+    const previous =
+      (before.inventory as typeof schema.inventory.$inferSelect | undefined)?.quantity ?? 0;
+
+    if (change.delta != null) {
+      const next = sql`GREATEST(${schema.inventory.quantity} + ${change.delta}, 0)`;
+      await this.db
+        .insert(schema.inventory)
+        .values({ productId: id, quantity: Math.max(previous + change.delta, 0) })
+        .onDuplicateKeyUpdate({ set: { quantity: next } });
+    } else {
+      const quantity = change.quantity ?? 0;
+      await this.db
+        .insert(schema.inventory)
+        .values({ productId: id, quantity })
+        .onDuplicateKeyUpdate({ set: { quantity } });
+    }
+
+    // Re-read rather than compute: the delta path settled in SQL, so this row
+    // is the only place the resulting figure is known for certain.
+    const row = await this.db.query.inventory.findFirst({
+      where: eq(schema.inventory.productId, id),
+    });
+    const quantity = row?.quantity ?? 0;
+
+    const restocked = before.status === 'sold_out' && quantity > 0;
+    if (restocked) {
+      await this.db
+        .update(schema.products)
+        .set({ status: 'available' })
+        .where(eq(schema.products.id, id));
+    }
 
     await this.audit.record(actor, 'inventory.set', 'product', String(id), {
-      quantity: { from: null, to: quantity },
+      quantity: { from: previous, to: quantity },
+      ...(restocked ? { status: { from: 'sold_out', to: 'available' } } : {}),
     });
 
-    return { ok: true };
+    /*
+     * Same rule as a status change made in the form: sold out to available is
+     * the transition the waitlist is owed an email for, and a restock reaches
+     * it by a different door. Detached for the same reason — the list may be
+     * long, and the admin's click must not wait on SMTP.
+     */
+    if (restocked && WaitlistNotifier.shouldNotify('sold_out', 'available')) {
+      this.waitlist.notifyInBackground(id);
+    }
+
+    return { ok: true, quantity, status: restocked ? 'available' : before.status };
   }
 }

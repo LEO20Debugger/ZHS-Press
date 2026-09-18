@@ -305,3 +305,26 @@ export const addProductImageSchema = z.object({
   position: z.number().int().min(0).optional(),
 });
 export type AddProductImageInput = z.infer<typeof addProductImageSchema>;
+
+/**
+ * An inventory change, expressed as either an absolute count or a delta.
+ *
+ * `delta` exists because the catalogue's +/- controls are a read-then-write
+ * away from being wrong: between the admin reading a stock figure and clicking
+ * "+", a customer can check out and decrement it. Sending "make it 13" would
+ * quietly undo that sale; sending "add one" cannot, because the arithmetic
+ * happens in the database against whatever the row actually holds.
+ *
+ * Absolute `quantity` is kept for the case where the admin has counted the
+ * shelf and wants the number to be exactly what they typed.
+ */
+export const adjustInventorySchema = z
+  .object({
+    quantity: z.number().int().min(0).max(1_000_000).optional(),
+    delta: z.number().int().min(-1_000_000).max(1_000_000).optional(),
+  })
+  .refine(
+    (value) => (value.quantity == null) !== (value.delta == null),
+    'Send either a quantity or a delta, not both.',
+  );
+export type AdjustInventoryInput = z.infer<typeof adjustInventorySchema>;
