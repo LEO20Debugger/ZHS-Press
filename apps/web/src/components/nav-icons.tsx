@@ -42,6 +42,16 @@ function Svg({
   );
 }
 
+/** Home: a house, because on a phone the logo is a small mark to aim at. */
+export function IconHome(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M4 10.5 12 4l8 6.5V19a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-8.5Z" />
+      <path d="M9.5 20v-6h5v6" />
+    </Svg>
+  );
+}
+
 /** Shop: a tote, the thing you leave a small press carrying. */
 export function IconShop(props: IconProps) {
   return (
