@@ -151,9 +151,16 @@ export function MobileMenu() {
         listener, and it still catches a tap on the link for the page you are
         already on, which changes no route and so fires no navigation.
       */}
+      {/*
+        Sized to the screen rather than to the longest label: a panel wide
+        enough to reach both gutters gives every row a full-width tap target,
+        so a thumb landing anywhere on the line hits the link. It stops short
+        of the edges so it still reads as a panel over the page rather than a
+        second page.
+      */}
       <ul
         onClick={close}
-        className="absolute right-0 top-8 w-52 border border-rule bg-paper-raised p-4"
+        className="absolute right-0 top-9 w-[min(20rem,calc(100vw-2.5rem))] border border-rule bg-paper-raised p-5"
       >
         {/*
           Home, and only here.
@@ -170,16 +177,16 @@ export function MobileMenu() {
           really a member of.
         */}
         <li>
-          <Link href="/" className="flex items-center gap-3 py-2 text-small">
-            <IconHome className="text-ink-muted" />
+          <Link href="/" className="flex items-center gap-3 py-3">
+            <IconHome size={20} className="text-ink-muted" />
             Home
           </Link>
         </li>
 
         {NAV.map((item) => (
           <li key={item.href}>
-            <Link href={item.href} className="flex items-center gap-3 py-2 text-small">
-              <item.Icon className="text-ink-muted" />
+            <Link href={item.href} className="flex items-center gap-3 py-3">
+              <item.Icon size={20} className="text-ink-muted" />
               {item.label}
             </Link>
 
@@ -190,11 +197,11 @@ export function MobileMenu() {
               down the group.
             */}
             {'children' in item ? (
-              <ul className="ml-[9px] border-l border-rule pl-4">
+              <ul className="ml-[10px] border-l border-rule pl-[22px]">
                 {item.children.map((child) => (
                   <li key={child.href}>
-                    <Link href={child.href} className="flex items-center gap-3 py-2 text-small">
-                      <child.Icon size={16} className="text-ink-muted" />
+                    <Link href={child.href} className="flex items-center gap-3 py-3">
+                      <child.Icon size={18} className="text-ink-muted" />
                       {child.label}
                     </Link>
                   </li>
