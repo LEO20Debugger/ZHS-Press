@@ -165,6 +165,18 @@ export default function ProductEditPage({ params }: { params: Promise<{ id: stri
   const [promoting, setPromoting] = useState(false);
   const [heroMessage, setHeroMessage] = useState<string | null>(null);
 
+  /*
+   * Warm the catalogue route while the confirmation is being read.
+   *
+   * Leaving is the only thing that modal offers, so its destination is known
+   * the moment it opens — fetching it then turns the wait after the click into
+   * a wait nobody is looking at. (Next disables prefetching under `next dev`,
+   * so this shows its value in a built app.)
+   */
+  useEffect(() => {
+    if (savedOpen) router.prefetch('/admin/products');
+  }, [savedOpen, router]);
+
   useEffect(() => {
     if (isNew) return;
     void fetch('/api/admin/admin/hero', { cache: 'no-store' })
@@ -357,15 +369,18 @@ export default function ProductEditPage({ params }: { params: Promise<{ id: stri
   }
 
   /*
-   * The catalogue is refreshed rather than merely navigated to: it is a server
-   * component, and without this the admin can arrive back at a cached list
-   * still showing the title, price or status they just changed.
+   * No router.refresh() here, deliberately. The catalogue is a client
+   * component that fetches its own rows on mount, so a refresh buys nothing —
+   * it only re-renders the server layout around it and adds a round trip
+   * between the click and the list appearing.
+   *
+   * The modal is left open across the navigation rather than closed first: the
+   * page is about to unmount anyway, and closing it early flashes the form
+   * back up for a frame on the way out.
    */
   function leaveToCatalogue() {
     setLeaving(true);
-    setSavedOpen(false);
     router.push('/admin/products');
-    router.refresh();
   }
 
   if (loading) return <p className="text-small text-ink-muted">Loading…</p>;
