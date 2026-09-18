@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import type { ProductType } from '@zhs/shared';
+import { FilterDropdown } from '@/components/filter-dropdown';
 import { ProductGrid } from '@/components/product-card';
 import { Eyebrow, HandDrawnRule } from '@/components/primitives';
 import { listProducts } from '@/lib/catalog';
@@ -50,6 +51,14 @@ export default async function ShopPage({ searchParams }: { searchParams: SearchP
     return queryString ? `/shop?${queryString}` : '/shop';
   };
 
+  const sortHrefFor = (next: (typeof SORTS)[number]['value']) => {
+    const query = new URLSearchParams();
+    if (category) query.set('category', category);
+    if (next !== 'newest') query.set('sort', next);
+    const queryString = query.toString();
+    return queryString ? `/shop?${queryString}` : '/shop';
+  };
+
   return (
     <>
       <div className="shell py-16 md:py-20">
@@ -62,7 +71,36 @@ export default async function ShopPage({ searchParams }: { searchParams: SearchP
       </div>
 
       <div className="sticky top-[var(--header-height)] z-40 border-y border-rule bg-paper/95 backdrop-blur">
-        <div className="shell flex flex-wrap items-center justify-between gap-x-4 gap-y-3 py-4">
+        {/*
+          Two presentations of one set of controls.
+
+          Below sm they are dropdowns: laid out flat, the pills wrap to two rows
+          and the sort row to a third, which pinned 170px of a phone screen to
+          filtering a nine-item catalogue. Above sm the width is there, and a
+          row of pills you can read without opening anything is plainly better
+          than one you have to.
+        */}
+        <div className="shell flex items-center justify-between gap-3 py-3 sm:hidden">
+          <FilterDropdown
+            label="Show"
+            options={FILTERS.map((filter) => ({
+              href: hrefFor(filter.value),
+              label: filter.label,
+              current: filter.value === category,
+            }))}
+          />
+          <FilterDropdown
+            label="Sort"
+            align="right"
+            options={SORTS.map((option) => ({
+              href: sortHrefFor(option.value),
+              label: option.label,
+              current: option.value === sort,
+            }))}
+          />
+        </div>
+
+        <div className="shell hidden flex-wrap items-center justify-between gap-x-4 gap-y-3 py-4 sm:flex">
           <nav aria-label="Filter by category">
             <ul className="flex flex-wrap gap-2">
               {FILTERS.map((filter) => {
@@ -86,39 +124,21 @@ export default async function ShopPage({ searchParams }: { searchParams: SearchP
             </ul>
           </nav>
 
-          {/*
-            The sort row, which at 375px was the one thing on the storefront
-            that genuinely broke: five columns sharing the width left every
-            label wrapping mid-phrase — "Price, low to" above "high" — and each
-            link was bare text, well under a comfortable thumb target.
-
-            Now the labels are unbreakable and the row wraps as whole items,
-            so a sort reads as one phrase wherever it lands. Nothing is put in
-            a horizontal scroller: an option that has to be swiped into view is
-            an option most people never find.
-          */}
-          <div className="flex w-full flex-wrap items-center gap-x-4 gap-y-1 sm:w-auto">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
             <p className="text-caption text-ink-muted">{total} items</p>
             <nav aria-label="Sort" className="flex flex-wrap items-center gap-x-4 gap-y-1">
-              {SORTS.map((option) => {
-                const query = new URLSearchParams();
-                if (category) query.set('category', category);
-                if (option.value !== 'newest') query.set('sort', option.value);
-                const queryString = query.toString();
-
-                return (
-                  <Link
-                    key={option.value}
-                    href={queryString ? `/shop?${queryString}` : '/shop'}
-                    aria-current={option.value === sort ? 'true' : undefined}
-                    className={`whitespace-nowrap py-1.5 text-caption ${
-                      option.value === sort ? 'text-ink underline' : 'text-ink-muted'
-                    }`}
-                  >
-                    {option.label}
-                  </Link>
-                );
-              })}
+              {SORTS.map((option) => (
+                <Link
+                  key={option.value}
+                  href={sortHrefFor(option.value)}
+                  aria-current={option.value === sort ? 'true' : undefined}
+                  className={`whitespace-nowrap py-1.5 text-caption ${
+                    option.value === sort ? 'text-ink underline' : 'text-ink-muted'
+                  }`}
+                >
+                  {option.label}
+                </Link>
+              ))}
             </nav>
           </div>
         </div>

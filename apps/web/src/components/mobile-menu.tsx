@@ -2,39 +2,11 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
+import { Fragment } from 'react';
 import { createPortal } from 'react-dom';
 import { IconClose, IconHome } from './nav-icons';
 import { NAV } from './nav-items';
-
-/**
- * How long the exit animation runs, matching --duration-fast in tokens.css.
- * Stated twice, in CSS and here, because a timeout cannot read a custom
- * property; if one moves the other has to follow.
- */
-const EXIT_MS = 120;
-
-/**
- * The phone menu.
- *
- * Still a details/summary disclosure, so it opens and closes before any
- * JavaScript has run and is keyboard-operable without being told how. What is
- * added here is everything `<details>` does *not* do, all of which a menu on a
- * phone is expected to do:
- *
- * - **Tapping outside closes it.** A disclosure has no concept of outside; a
- *   menu does. Without this the only way out is to find the word Menu again,
- *   and a panel that will not dismiss reads as a stuck page.
- * - **Escape closes it**, returning focus to the button that opened it, which
- *   is where a keyboard user expects to be put back.
- * - **Following a link closes it.** Client-side navigation swaps the page under
- *   a header that never unmounts, so the menu would otherwise stay open over
- *   whatever you had just chosen.
- *
- * The open state stays in the DOM rather than in React. `<details>` owns it
- * natively, and mirroring it into state would mean two sources of truth that
- * drift the first time the browser toggles it without asking.
- */
+import { useDisclosure } from './use-disclosure';
 
 /**
  * One row of the menu.
@@ -81,127 +53,17 @@ function Row({
   );
 }
 
+/**
+ * The phone menu.
+ *
+ * A details/summary disclosure, so it opens and closes before any JavaScript
+ * has run and is keyboard-operable without being told how. useDisclosure adds
+ * what a disclosure does not do and a menu must: dismiss on an outside tap, on
+ * Escape, and on navigation, and hold itself open long enough to animate shut.
+ */
 export function MobileMenu() {
-  const ref = useRef<HTMLDetailsElement>(null);
+  const { ref, open, closing, close } = useDisclosure();
   const pathname = usePathname();
-
-  /*
-   * A mirror of the DOM's open state, not a replacement for it — `<details>`
-   * still owns the toggle. This exists only because the backdrop is rendered
-   * elsewhere in the document and has to be told when to appear.
-   */
-  const [open, setOpen] = useState(false);
-
-  /*
-   * True while the exit animation is playing. The panel is still open in the
-   * DOM throughout — that is the whole point of it.
-   */
-  const [closing, setClosing] = useState(false);
-  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  /*
-   * Closing in two steps, because `<details>` gives no say in the matter: the
-   * moment `open` flips to false the content is gone, with nothing left to
-   * animate. So the flag goes up, the exit plays against a panel that is still
-   * open, and only then does the element actually close.
-   *
-   * Reduced motion skips straight to the end. The global rule would collapse
-   * the animation to nothing anyway, but the timeout is JavaScript and knows
-   * nothing about that rule — left in, it would hold a finished-looking panel
-   * on screen for another 120ms.
-   */
-  const close = useCallback(() => {
-    const el = ref.current;
-    if (!el?.open) return;
-
-    const instant =
-      typeof window !== 'undefined' &&
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-    if (instant) {
-      el.open = false;
-      return;
-    }
-
-    setClosing(true);
-    if (closeTimer.current) clearTimeout(closeTimer.current);
-    closeTimer.current = setTimeout(() => {
-      el.open = false;
-      setClosing(false);
-    }, EXIT_MS);
-  }, []);
-
-  // A menu left mid-exit by a navigation must not fire its timer into a
-  // component that is no longer here.
-  useEffect(() => () => {
-    if (closeTimer.current) clearTimeout(closeTimer.current);
-  }, []);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-
-    /*
-     * Clears `closing` whenever the element ends up closed by some other
-     * route — the summary's own toggle, mainly, which flips it shut at once and
-     * would otherwise leave the flag raised and the next opening pre-faded.
-     */
-    const sync = () => {
-      setOpen(el.open);
-      if (!el.open) {
-        if (closeTimer.current) clearTimeout(closeTimer.current);
-        setClosing(false);
-      }
-    };
-    sync();
-    el.addEventListener('toggle', sync);
-    return () => el.removeEventListener('toggle', sync);
-  }, []);
-
-  /*
-   * Belt and braces alongside the click handler below: that one covers a tap
-   * on a link in this menu, this one covers arriving anywhere by any other
-   * route — a redirect, the back button, a link elsewhere on the page.
-   */
-  useEffect(() => {
-    close();
-  }, [pathname, close]);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-
-    /*
-     * A second line of defence behind the backdrop, which handles the ordinary
-     * case. This catches a press that reaches the page some other way — from
-     * outside the viewport the backdrop covers, or before it has painted.
-     *
-     * pointerdown, not click: it fires at the moment of contact, so the menu is
-     * already gone by the time the finger lifts. On click the panel lingers
-     * for the length of the tap, which is exactly long enough to look broken.
-     *
-     * A press on the summary itself is inside the element, so it falls through
-     * to the native toggle rather than being closed here and reopened there.
-     */
-    const onPointerDown = (event: PointerEvent) => {
-      if (!el.open) return;
-      if (event.target instanceof Node && el.contains(event.target)) return;
-      el.open = false;
-    };
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape' || !el.open) return;
-      el.open = false;
-      el.querySelector('summary')?.focus();
-    };
-
-    document.addEventListener('pointerdown', onPointerDown);
-    document.addEventListener('keydown', onKeyDown);
-    return () => {
-      document.removeEventListener('pointerdown', onPointerDown);
-      document.removeEventListener('keydown', onKeyDown);
-    };
-  }, []);
 
   /*
    * A running position for the stagger, reset on every render so the rows are
@@ -251,18 +113,12 @@ export function MobileMenu() {
         : null}
 
       {/*
-        Icons here, and not on the desktop row: a thumb picks a target by shape
-        before it reads a word, and the menu is the one place on a phone where
-        five destinations are weighed at once. They sit at a fixed width so the
-        labels stay on a common left edge — ragged text beside mixed-width
-        glyphs is the thing that makes a list of icons look assembled rather
-        than drawn.
+        Icons rather than a bare list: a thumb picks a target by shape before it
+        reads a word, and the menu is the one place on a phone where every
+        destination is weighed at once. They sit at a fixed width so the labels
+        stay on a common left edge — ragged text beside mixed-width glyphs is
+        what makes a list of icons look assembled rather than drawn.
 
-        The click handler sits on the list rather than on each link: one
-        listener, and it still catches a tap on the link for the page you are
-        already on, which changes no route and so fires no navigation.
-      */}
-      {/*
         Sized to the screen rather than to the longest label: a panel wide
         enough to reach both gutters gives every row a full-width tap target,
         so a thumb landing anywhere on the line hits the link. It stops short

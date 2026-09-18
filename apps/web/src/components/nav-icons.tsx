@@ -54,6 +54,15 @@ export function IconClose(props: IconProps) {
   );
 }
 
+/** Chevron: points down at a closed panel, and turns over with it. */
+export function IconChevron(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="m6 9 6 6 6-6" />
+    </Svg>
+  );
+}
+
 /** Home: a house, because on a phone the logo is a small mark to aim at. */
 export function IconHome(props: IconProps) {
   return (

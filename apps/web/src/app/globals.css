@@ -574,3 +574,27 @@
     animation: menu-backdrop-in var(--duration-fast) var(--ease-out) both;
   }
 }
+
+@layer components {
+  /*
+   * The disclosure chevron turns over when its panel opens.
+   *
+   * A plain descendant rule rather than a Tailwind variant or a React class,
+   * so it follows the element's own [open] attribute. That keeps it working
+   * for a reader with no JavaScript, where <details> still opens but no state
+   * exists to describe it.
+   *
+   * Worth knowing if you ever debug this: getComputedStyle().transform reports
+   * an identity matrix for an SVG with transform-box: view-box even while the
+   * rotation is plainly applied, and this glyph's bounding box is unchanged by
+   * a 180 degree turn about its own centre. Both of the obvious ways to check
+   * it say nothing is happening. getScreenCTM() on the path tells the truth.
+   */
+  .disclosure-chevron {
+    transition: transform var(--duration-fast) var(--ease-out);
+  }
+
+  details[open] > summary .disclosure-chevron {
+    transform: rotate(180deg);
+  }
+}
