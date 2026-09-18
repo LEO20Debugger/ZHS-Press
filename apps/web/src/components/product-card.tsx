@@ -40,8 +40,10 @@ function StatusSticker({ product }: { product: ProductSummary }) {
     case 'sold_out':
       return <Sticker tone="quiet">Sold out</Sticker>;
     default:
+      // Ink, not accent: this sticker sits on the cover, and the accent is the
+      // pigment that cover is already made of — see the note on Sticker.
       return product.purchasable && product.stockLevel === 'low' ? (
-        <Sticker tone="accent">Only a few left</Sticker>
+        <Sticker>Only a few left</Sticker>
       ) : null;
   }
 }
