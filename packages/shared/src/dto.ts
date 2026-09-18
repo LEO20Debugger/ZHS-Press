@@ -10,7 +10,13 @@
 import type { Currency } from './money';
 
 export type ProductType = 'book' | 'magazine' | 'stationery';
-export type ProductStatus = 'draft' | 'coming_soon' | 'available' | 'sold_out' | 'archived';
+/** Coarse stock, as the storefront is allowed to know it. */
+export type StockLevel = 'in_stock' | 'low' | 'out';
+
+/** At or below this many remaining, a title is advertised as running low. */
+export const LOW_STOCK_THRESHOLD = 5;
+
+export type ProductStatus ='draft' | 'coming_soon' | 'available' | 'sold_out' | 'archived';
 
 export interface ProductImage {
   url: string;
@@ -46,6 +52,27 @@ export interface ProductSummary {
   /** Denormalised for listing cards: the author, issue number or cover artist. */
   attribution: string | null;
   purchasable: boolean;
+  /**
+   * How much is left, coarsely.
+   *
+   * Deliberately not the raw count. Catalogue responses are cached for a
+   * minute, so a precise figure is a promise that can already be broken by the
+   * time it is read — and a *high* count works against a small press anyway:
+   * "247 in stock" says nobody is buying this. Three buckets degrade
+   * gracefully under staleness; an integer does not.
+   *
+   * Untracked stock and backorderable titles both report `in_stock`. Neither
+   * has a shelf that can run out from the shopper's point of view.
+   */
+  stockLevel: StockLevel;
+  /**
+   * The count behind a `low` level, and null at every other level.
+   *
+   * "Only 3 left" earns its place on a product page, where it is a real nudge
+   * at the moment of deciding. Anything above the threshold stays private, so
+   * the field cannot be polled to infer how fast a title sells.
+   */
+  stockRemaining: number | null;
 }
 
 export interface BookDetail {

@@ -8,12 +8,14 @@ import {
   LIGHT_MAGAZINE_ACCENT,
   TERRACOTTA,
 } from '@zhs/ui';
+import { LOW_STOCK_THRESHOLD } from '@zhs/shared';
 import type {
   AccentPairing,
   Paginated,
   ProductDetail,
   ProductQuery,
   ProductSummary,
+  StockLevel,
 } from '@zhs/shared';
 import { DB } from '../db/db.module';
 
@@ -53,6 +55,7 @@ export class ProductsService {
         book: true,
         issue: true,
         stationery: true,
+        inventory: true,
       },
     });
 
@@ -76,6 +79,7 @@ export class ProductsService {
         book: true,
         issue: true,
         stationery: true,
+        inventory: true,
         contributors: {
           orderBy: asc(schema.productContributors.position),
           with: { contributor: true },
@@ -100,7 +104,11 @@ export class ProductsService {
         eq(schema.products.type, 'magazine'),
         inArray(schema.products.status, [...PUBLIC_STATUSES]),
       ),
-      with: { images: { orderBy: asc(schema.productImages.position), limit: 1 }, issue: true },
+      with: {
+        images: { orderBy: asc(schema.productImages.position), limit: 1 },
+        issue: true,
+        inventory: true,
+      },
     });
 
     return rows
@@ -129,7 +137,11 @@ export class ProductsService {
         eq(schema.products.type, 'magazine'),
         inArray(schema.products.status, [...PUBLIC_STATUSES]),
       ),
-      with: { images: { orderBy: asc(schema.productImages.position), limit: 1 }, issue: true },
+      with: {
+        images: { orderBy: asc(schema.productImages.position), limit: 1 },
+        issue: true,
+        inventory: true,
+      },
     });
 
     const today = new Date().toLocaleDateString('en-CA');
@@ -240,7 +252,36 @@ export class ProductsService {
       // Only an available title can be bought. coming_soon offers a waitlist,
       // sold_out stays browsable in the archive.
       purchasable: row.status === 'available',
+      ...this.stockFor(row.inventory),
     };
+  }
+
+  /**
+   * Reduces a stock row to the three buckets the storefront may see.
+   *
+   * Derived from inventory alone, not from status: a sold-out *status* already
+   * has its own treatment on the page, and mixing the two here would leave the
+   * rule stated in two places that could disagree. The storefront decides when
+   * a level is worth showing — the badge only appears on something that can
+   * actually be bought.
+   *
+   * A missing row means a product nobody has ever counted, which is treated as
+   * untracked rather than as zero: reporting `out` for it would hide a title
+   * that is, as far as anyone has said, perfectly available.
+   */
+  private stockFor(
+    inventory: typeof schema.inventory.$inferSelect | undefined | null,
+  ): { stockLevel: StockLevel; stockRemaining: number | null } {
+    if (!inventory || !inventory.trackInventory || inventory.allowBackorder) {
+      return { stockLevel: 'in_stock', stockRemaining: null };
+    }
+
+    const quantity = inventory.quantity ?? 0;
+    if (quantity <= 0) return { stockLevel: 'out', stockRemaining: 0 };
+    if (quantity <= LOW_STOCK_THRESHOLD) return { stockLevel: 'low', stockRemaining: quantity };
+
+    // Above the threshold the figure itself stays private — see the DTO.
+    return { stockLevel: 'in_stock', stockRemaining: null };
   }
 
   private toDetail(row: ProductRow & Record<string, any>): ProductDetail {

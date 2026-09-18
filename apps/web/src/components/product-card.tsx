@@ -24,14 +24,25 @@ const VIEW_LABELS: Partial<Record<ProductSummary['type'], string>> = {
   magazine: 'View issue',
 };
 
-function StatusSticker({ status }: { status: ProductSummary['status'] }) {
-  switch (status) {
+/**
+ * The one sticker a cover carries.
+ *
+ * Status wins over stock, and they cannot collide anyway: only an `available`
+ * title reaches the low-stock case, and a sold-out one is already labelled by
+ * its status. The count is left off here on purpose — a grid of cards each
+ * claiming an exact figure invites the reader to compare them, and the number
+ * is only worth stating at the point of deciding, on the product page itself.
+ */
+function StatusSticker({ product }: { product: ProductSummary }) {
+  switch (product.status) {
     case 'coming_soon':
       return <Sticker>Coming soon</Sticker>;
     case 'sold_out':
       return <Sticker tone="quiet">Sold out</Sticker>;
     default:
-      return null;
+      return product.purchasable && product.stockLevel === 'low' ? (
+        <Sticker tone="accent">Only a few left</Sticker>
+      ) : null;
   }
 }
 
@@ -76,7 +87,7 @@ export function ProductCard({ product }: { product: ProductSummary }) {
         )}
 
         <div className="sticker-settle absolute left-3 top-3">
-          <StatusSticker status={product.status} />
+          <StatusSticker product={product} />
         </div>
       </div>
 

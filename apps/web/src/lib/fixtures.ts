@@ -1,3 +1,4 @@
+import { LOW_STOCK_THRESHOLD } from '@zhs/shared';
 import type { ProductDetail, ProductSummary } from '@zhs/shared';
 
 /**
@@ -13,12 +14,34 @@ import type { ProductDetail, ProductSummary } from '@zhs/shared';
  * before launch. Prices are the ones currently listed on Amazon where known.
  */
 
-interface Fixture extends Omit<ProductDetail, 'purchasable'> {
+interface Fixture extends Omit<ProductDetail, 'purchasable' | 'stockLevel' | 'stockRemaining'> {
   purchasable?: boolean;
+  /**
+   * Copies left, so the low-stock treatment can be seen without a database.
+   * Omitted means plenty — the same answer the API gives for stock it is not
+   * tracking.
+   */
+  stock?: number;
 }
 
 function product(fixture: Fixture): ProductDetail {
-  return { ...fixture, purchasable: fixture.status === 'available' };
+  // Mirrors ProductsService.stockFor: one rule, stated the same way on both
+  // sides, so a fixture cannot show a badge the real API would not.
+  const stockLevel =
+    fixture.stock == null
+      ? 'in_stock'
+      : fixture.stock <= 0
+        ? 'out'
+        : fixture.stock <= LOW_STOCK_THRESHOLD
+          ? 'low'
+          : 'in_stock';
+
+  return {
+    ...fixture,
+    purchasable: fixture.status === 'available',
+    stockLevel,
+    stockRemaining: stockLevel === 'low' ? fixture.stock! : stockLevel === 'out' ? 0 : null,
+  };
 }
 
 function bookCover(filename: string, title: string) {
@@ -122,6 +145,8 @@ export const FIXTURE_PRODUCTS: ProductDetail[] = [
     slug: 'bloom',
     type: 'book',
     status: 'available',
+    // Deliberately short, so the low-stock treatment is visible in review.
+    stock: 3,
     title: 'Bloom',
     subtitle: 'On grief, and what grows after',
     blurb:

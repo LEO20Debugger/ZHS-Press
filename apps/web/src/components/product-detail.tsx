@@ -57,12 +57,30 @@ function BuyActions({ product }: { product: ProductDetail }) {
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-4">
-      <AddToCart productId={product.id} title={product.title} />
-      {product.amazonUrl ? (
-        <Button href={product.amazonUrl} variant="outline">
-          Buy on Amazon
-        </Button>
+    <div>
+      <div className="flex flex-wrap items-center gap-4">
+        <AddToCart productId={product.id} title={product.title} />
+        {product.amazonUrl ? (
+          <Button href={product.amazonUrl} variant="outline">
+            Buy on Amazon
+          </Button>
+        ) : null}
+      </div>
+
+      {/*
+        The count, stated once, at the point of deciding.
+
+        Under the button rather than beside the price: it qualifies the act of
+        buying, not the amount. It is also the last chance to say this before
+        checkout does — where running out currently surfaces as an error after
+        an address has been typed.
+      */}
+      {product.stockLevel === 'low' && product.stockRemaining != null ? (
+        <p role="status" className="mt-3 text-small text-ink-muted">
+          {product.stockRemaining === 1
+            ? 'Only 1 left in stock.'
+            : `Only ${product.stockRemaining} left in stock.`}
+        </p>
       ) : null}
     </div>
   );
