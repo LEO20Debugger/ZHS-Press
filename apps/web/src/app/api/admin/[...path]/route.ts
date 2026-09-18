@@ -1,6 +1,23 @@
+import { revalidateTag } from 'next/cache';
 import { NextResponse, type NextRequest } from 'next/server';
 
 const API_BASE_URL = process.env.API_BASE_URL ?? 'http://localhost:4000';
+
+/**
+ * Admin paths whose writes change what a shopper sees.
+ *
+ * Catalogue reads are cached for a minute under the `catalog` tag, which until
+ * now was set but never invalidated — so a price, a status or a stock change
+ * took up to 60s to reach the storefront. Clearing the tag here closes that
+ * window: the admin's own save is the signal, and it arrives through this
+ * proxy anyway.
+ *
+ * Deliberately coarse. One tag covers every catalogue read, and stock changes
+ * alone would not justify the bookkeeping of per-product tags — an editor
+ * saving a product is rare enough that re-fetching the catalogue costs
+ * nothing, and a rule nobody has to maintain cannot fall out of date.
+ */
+const CATALOGUE_WRITE_PREFIXES = ['admin/products', 'admin/hero'];
 
 /**
  * Catch-all proxy for the admin API.
@@ -80,6 +97,24 @@ async function proxy(request: NextRequest, path: string[]) {
     );
   } else if (bytes > 0) {
     console.log(`[admin-proxy] ${route} → ${response.status} (${bytes} bytes sent)`);
+  }
+
+  /*
+   * Drop the storefront's catalogue cache once a write has actually succeeded.
+   *
+   * After the status check, never before: a rejected save changes nothing, and
+   * invalidating on it would throw away a good cache to re-fetch identical
+   * data. GET is excluded by the same token — reading the admin list is not a
+   * reason to expire anything.
+   */
+  const joined = path.join('/');
+  if (
+    response.ok &&
+    request.method !== 'GET' &&
+    request.method !== 'HEAD' &&
+    CATALOGUE_WRITE_PREFIXES.some((prefix) => joined.startsWith(prefix))
+  ) {
+    revalidateTag('catalog');
   }
 
   const contentType = response.headers.get('content-type') ?? 'application/json';

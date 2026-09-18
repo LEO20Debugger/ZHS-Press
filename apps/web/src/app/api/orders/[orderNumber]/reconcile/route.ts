@@ -1,3 +1,4 @@
+import { revalidateTag } from 'next/cache';
 import { NextResponse } from 'next/server';
 
 const API_BASE_URL = process.env.API_BASE_URL ?? 'http://localhost:4000';
@@ -48,6 +49,18 @@ export async function POST(
         { status: response.status },
       );
     }
+
+    /*
+     * A settlement here has just decremented stock, and may have flipped a
+     * title to sold out. Expire the catalogue so the storefront stops offering
+     * what was only just bought, instead of waiting out the 60s window.
+     *
+     * Unconditional on success, including the already-settled case: this runs
+     * once per customer returning from payment, which is far too rare to be
+     * worth distinguishing, and re-fetching a catalogue costs less than
+     * reasoning about which of two paths did the decrementing.
+     */
+    revalidateTag('catalog');
 
     return NextResponse.json(await response.json());
   } catch {
