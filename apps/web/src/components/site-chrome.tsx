@@ -4,14 +4,8 @@ import { LogoTagline } from './logo-tagline';
 import { CartCount } from './cart-count';
 import { Eyebrow, HandDrawnRule } from './primitives';
 import { NewsletterForm } from './newsletter-form';
-
-const NAV = [
-  { href: '/books', label: 'Books' },
-  { href: '/magazine', label: 'Magazine' },
-  { href: '/shop', label: 'Shop' },
-  { href: '/submissions', label: 'Submissions' },
-  { href: '/about', label: 'About' },
-] as const;
+import { MobileMenu } from './mobile-menu';
+import { FOOTER_NAV, NAV } from './nav-items';
 
 const SOCIAL = [
   { href: 'https://www.instagram.com/zhspress', label: 'Instagram' },
@@ -48,10 +42,34 @@ export function SiteHeader() {
         <nav aria-label="Primary" className="hidden md:block">
           <ul className="flex items-center gap-8">
             {NAV.map((item) => (
-              <li key={item.href}>
+              /*
+                group + focus-within, no JavaScript. The submenu opens on hover
+                for a pointer and on focus for a keyboard, and Shop stays a real
+                link either way — a top-level item that only opens a menu leaves
+                anyone who wants the whole catalogue with nothing to click.
+
+                No icons at this size: the labels are already legible, and six
+                glyphs across a header competes with the logo for a row that is
+                meant to be quiet.
+              */
+              <li key={item.href} className="group relative">
                 <Link href={item.href} className="link-underline text-small">
                   {item.label}
                 </Link>
+
+                {'children' in item ? (
+                  <ul
+                    className="invisible absolute left-1/2 top-full z-50 w-44 -translate-x-1/2 border border-rule bg-paper-raised p-4 opacity-0 transition-opacity duration-fast group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100"
+                  >
+                    {item.children.map((child) => (
+                      <li key={child.href} className="py-1.5">
+                        <Link href={child.href} className="link-underline text-small">
+                          {child.label}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
               </li>
             ))}
           </ul>
@@ -59,25 +77,7 @@ export function SiteHeader() {
 
         <div className="flex items-center gap-6">
           <CartCount />
-          {/*
-            Mobile navigation is a details/summary disclosure rather than a
-            JS drawer: it works before hydration and is keyboard-operable for
-            free.
-          */}
-          <details className="relative md:hidden">
-            <summary className="cursor-pointer list-none text-small [&::-webkit-details-marker]:hidden">
-              Menu
-            </summary>
-            <ul className="absolute right-0 top-8 w-44 border border-rule bg-paper-raised p-4">
-              {NAV.map((item) => (
-                <li key={item.href} className="py-1.5">
-                  <Link href={item.href} className="text-small">
-                    {item.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </details>
+          <MobileMenu />
         </div>
       </div>
     </header>
@@ -105,7 +105,7 @@ export function SiteFooter() {
           <nav aria-label="Footer">
             <h3 className="eyebrow">Browse</h3>
             <ul className="mt-4 space-y-2">
-              {NAV.map((item) => (
+              {FOOTER_NAV.map((item) => (
                 <li key={item.href}>
                   <Link href={item.href} className="link-underline text-small">
                     {item.label}

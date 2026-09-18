@@ -57,12 +57,12 @@ export default async function ShopPage({ searchParams }: { searchParams: SearchP
         <h1 className="mt-4 text-display">Everything we make, in one place.</h1>
         <HandDrawnRule className="mt-5 max-w-[220px] text-terracotta" />
         <p className="prose-editorial mt-5 text-ink-muted">
-          Books, issues of <em>LIGHT</em>, and journals. Prices in USD, delivered worldwide.
+          Books, issues of <em>LIGHT</em>, and journals. Delivered worldwide.
         </p>
       </div>
 
-      <div className="sticky top-[65px] z-40 border-y border-rule bg-paper/95 backdrop-blur">
-        <div className="shell flex flex-wrap items-center justify-between gap-4 py-4">
+      <div className="sticky top-[var(--header-height)] z-40 border-y border-rule bg-paper/95 backdrop-blur">
+        <div className="shell flex flex-wrap items-center justify-between gap-x-4 gap-y-3 py-4">
           <nav aria-label="Filter by category">
             <ul className="flex flex-wrap gap-2">
               {FILTERS.map((filter) => {
@@ -86,9 +86,20 @@ export default async function ShopPage({ searchParams }: { searchParams: SearchP
             </ul>
           </nav>
 
-          <div className="flex items-center gap-4">
+          {/*
+            The sort row, which at 375px was the one thing on the storefront
+            that genuinely broke: five columns sharing the width left every
+            label wrapping mid-phrase — "Price, low to" above "high" — and each
+            link was bare text, well under a comfortable thumb target.
+
+            Now the labels are unbreakable and the row wraps as whole items,
+            so a sort reads as one phrase wherever it lands. Nothing is put in
+            a horizontal scroller: an option that has to be swiped into view is
+            an option most people never find.
+          */}
+          <div className="flex w-full flex-wrap items-center gap-x-4 gap-y-1 sm:w-auto">
             <p className="text-caption text-ink-muted">{total} items</p>
-            <nav aria-label="Sort" className="flex gap-3">
+            <nav aria-label="Sort" className="flex flex-wrap items-center gap-x-4 gap-y-1">
               {SORTS.map((option) => {
                 const query = new URLSearchParams();
                 if (category) query.set('category', category);
@@ -100,7 +111,7 @@ export default async function ShopPage({ searchParams }: { searchParams: SearchP
                     key={option.value}
                     href={queryString ? `/shop?${queryString}` : '/shop'}
                     aria-current={option.value === sort ? 'true' : undefined}
-                    className={`text-caption ${
+                    className={`whitespace-nowrap py-1.5 text-caption ${
                       option.value === sort ? 'text-ink underline' : 'text-ink-muted'
                     }`}
                   >
