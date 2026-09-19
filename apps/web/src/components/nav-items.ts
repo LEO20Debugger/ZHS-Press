@@ -8,7 +8,24 @@ import {
 } from './nav-icons';
 
 /**
- * The primary navigation, alphabetical at both levels.
+ * The desktop row, flat and in its original order.
+ *
+ * Grouping under Shop is a phone answer to a phone problem: a panel opened with
+ * a thumb, where five or six rows have to be weighed one after another and
+ * nesting tells you which belong together. A desktop header has the width to
+ * say all of it at once, and a top-level item that hides three more behind a
+ * hover is slower to use than the five words themselves.
+ */
+export const DESKTOP_NAV = [
+  { href: '/books', label: 'Books' },
+  { href: '/magazine', label: 'Magazine' },
+  { href: '/shop', label: 'Shop' },
+  { href: '/submissions', label: 'Submissions' },
+  { href: '/about', label: 'About' },
+] as const;
+
+/**
+ * The phone menu, alphabetical at both levels.
  *
  * What the press sells sits under Shop rather than beside it: Books, Magazine
  * and Stationery are three views of one catalogue, and listing them flat left

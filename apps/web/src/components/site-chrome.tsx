@@ -5,7 +5,7 @@ import { CartCount } from './cart-count';
 import { Eyebrow, HandDrawnRule } from './primitives';
 import { NewsletterForm } from './newsletter-form';
 import { MobileMenu } from './mobile-menu';
-import { FOOTER_NAV, NAV } from './nav-items';
+import { DESKTOP_NAV, FOOTER_NAV } from './nav-items';
 
 const SOCIAL = [
   { href: 'https://www.instagram.com/zhspress', label: 'Instagram' },
@@ -39,37 +39,20 @@ export function SiteHeader() {
           <LogoTagline className="hidden h-6 w-auto text-ink sm:block md:h-7" />
         </Link>
 
+        {/*
+          Flat, and in the order the press thinks of its own work: what it
+          makes, then where to buy it, then how to reach it. The phone menu
+          groups the catalogue under Shop because a thumb reads a panel one row
+          at a time; a header at this width says everything at once, and hiding
+          three of them behind a hover would only make the fast case slower.
+        */}
         <nav aria-label="Primary" className="hidden md:block">
           <ul className="flex items-center gap-8">
-            {NAV.map((item) => (
-              /*
-                group + focus-within, no JavaScript. The submenu opens on hover
-                for a pointer and on focus for a keyboard, and Shop stays a real
-                link either way — a top-level item that only opens a menu leaves
-                anyone who wants the whole catalogue with nothing to click.
-
-                No icons at this size: the labels are already legible, and six
-                glyphs across a header competes with the logo for a row that is
-                meant to be quiet.
-              */
-              <li key={item.href} className="group relative">
+            {DESKTOP_NAV.map((item) => (
+              <li key={item.href}>
                 <Link href={item.href} className="link-underline text-small">
                   {item.label}
                 </Link>
-
-                {'children' in item ? (
-                  <ul
-                    className="invisible absolute left-1/2 top-full z-50 w-44 -translate-x-1/2 border border-rule bg-paper-raised p-4 opacity-0 transition-opacity duration-fast group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100"
-                  >
-                    {item.children.map((child) => (
-                      <li key={child.href} className="py-1.5">
-                        <Link href={child.href} className="link-underline text-small">
-                          {child.label}
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
               </li>
             ))}
           </ul>
