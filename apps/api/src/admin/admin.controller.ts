@@ -323,13 +323,27 @@ export class AdminController {
     return this.products.setInventory(id, body, request.admin!);
   }
 
-  /** Archives rather than deletes; past orders must keep their references. */
-  @Delete('products/:id')
+  /**
+   * Off the storefront, still on record. The reversible one.
+   *
+   * A POST rather than the DELETE below, because these are genuinely different
+   * acts and one verb cannot mean both.
+   */
+  @Post('products/:id/archive')
   archiveProduct(
     @Param('id', ParseIntPipe) id: number,
     @Req() request: AuthenticatedRequest,
   ) {
     return this.products.archive(id, request.admin!);
+  }
+
+  /** Permanent. Refused with a 409 once the title has been ordered. */
+  @Delete('products/:id')
+  deleteProduct(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return this.products.remove(id, request.admin!);
   }
 
   @Get('submissions')

@@ -1,4 +1,10 @@
-import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { and, asc, count, desc, eq, like, ne, or, sql, type SQL } from 'drizzle-orm';
 import { schema, type Database } from '@zhs/db';
 import { deriveTint, validateAccent, ACCENT_PALETTE } from '@zhs/ui';
@@ -396,11 +402,11 @@ export class AdminProductsService {
   }
 
   /**
-   * Archiving, not deleting.
+   * Takes a title off the storefront without destroying it.
    *
-   * A product referenced by past order items must not vanish — the storefront
-   * stops showing it, but the record survives. Per the brief, removals are
-   * signed off by the press before removal, and archiving keeps that reversible.
+   * Reversible, and the right answer for anything that was ever real: the
+   * shopper-facing lists exclude `archived`, but the row, its satellites and
+   * every reference to it survive. `remove` is the irreversible counterpart.
    */
   async archive(id: number, actor: AdminPrincipal) {
     await this.findOne(id);
@@ -411,6 +417,46 @@ export class AdminProductsService {
 
     await this.audit.record(actor, 'product.archive', 'product', String(id), {
       status: { from: 'previous', to: 'archived' },
+    });
+
+    return { ok: true };
+  }
+
+  /**
+   * Permanent delete, for a title that should never have existed — a
+   * placeholder, a duplicate, a typo caught before launch.
+   *
+   * Refused once the product has been ordered. The schema would technically
+   * survive it (`order_items.product_id` is ON DELETE SET NULL, and the title,
+   * slug and price are snapshotted on the line), but an order that no longer
+   * links to anything is a worse record than an archived product, and the
+   * person clicking delete cannot see which titles have sold. So the check is
+   * here rather than left to their judgement, and it names the way forward.
+   *
+   * Everything genuinely owned by the product goes with it: the type satellite,
+   * inventory, images, contributor links, open cart lines and waitlist
+   * signups all cascade from the foreign keys.
+   */
+  async remove(id: number, actor: AdminPrincipal) {
+    const product = await this.findOne(id);
+
+    const [ordered] = await this.db
+      .select({ lines: count() })
+      .from(schema.orderItems)
+      .where(eq(schema.orderItems.productId, id));
+
+    if ((ordered?.lines ?? 0) > 0) {
+      throw new ConflictException({
+        message: `"${product.title}" has been ordered and cannot be deleted. Archive it instead — it comes off the storefront and the orders keep their history.`,
+      });
+    }
+
+    await this.db.delete(schema.products).where(eq(schema.products.id, id));
+
+    // Recorded after the fact, with enough of the row to identify what went:
+    // the product id it points at no longer resolves to anything.
+    await this.audit.record(actor, 'product.delete', 'product', String(id), {
+      deleted: { from: `${product.title} (${product.slug})`, to: null },
     });
 
     return { ok: true };

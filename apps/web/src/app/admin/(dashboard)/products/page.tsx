@@ -58,6 +58,60 @@ export default function AdminProductsPage() {
    * server-side — the pill two columns over has to follow, or the table shows a
    * title as sold out while its own stock column says there are twelve.
    */
+  /*
+   * Which row is armed for removal. A single id rather than a per-row flag:
+   * only one row can be mid-decision at a time, and arming a second should
+   * disarm the first rather than leave two live delete buttons on screen.
+   */
+  const [confirming, setConfirming] = useState<number | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<{ id: number; message: string } | null>(null);
+
+  /*
+   * Delete is refused server-side for anything that has sold, and the refusal
+   * explains itself — so the message is shown on the row rather than swallowed,
+   * and the row stays armed so Archive is one click away from where they are.
+   */
+  async function removeRow(row: Row) {
+    setBusy(true);
+    setError(null);
+
+    const response = await fetch(`/api/admin/admin/products/${row.id}`, { method: 'DELETE' });
+    setBusy(false);
+
+    if (!response.ok) {
+      const payload = await response.json().catch(() => null);
+      setError({ id: row.id, message: payload?.message ?? `Could not delete ${row.title}.` });
+      return;
+    }
+
+    setConfirming(null);
+    setRows((prev) => prev.filter((item) => item.id !== row.id));
+  }
+
+  async function archiveRow(row: Row) {
+    setBusy(true);
+    setError(null);
+
+    const response = await fetch(`/api/admin/admin/products/${row.id}/archive`, {
+      method: 'POST',
+    });
+    setBusy(false);
+
+    if (!response.ok) {
+      const payload = await response.json().catch(() => null);
+      setError({ id: row.id, message: payload?.message ?? `Could not archive ${row.title}.` });
+      return;
+    }
+
+    // Archived titles stay in the admin list — that is the point of the admin
+    // list — so the row keeps its place and only the pill changes.
+    setConfirming(null);
+    setRows((prev) =>
+      prev.map((item) => (item.id === row.id ? { ...item, status: 'archived' } : item)),
+    );
+  }
+
   function applyStock(id: number, next: { quantity: number; status?: string }) {
     setRows((prev) =>
       prev.map((row) =>
@@ -117,7 +171,10 @@ export default function AdminProductsPage() {
                 <th scope="col" className="py-3 pr-4 font-ui font-medium">Status</th>
                 <th scope="col" className="py-3 pr-4 font-ui font-medium">Price</th>
                 <th scope="col" className="hidden py-3 pr-4 font-ui font-medium sm:table-cell">Stock</th>
-                <th scope="col" className="hidden py-3 font-ui font-medium sm:table-cell">Amazon</th>
+                <th scope="col" className="hidden py-3 pr-4 font-ui font-medium sm:table-cell">Amazon</th>
+                <th scope="col" className="py-3 text-right font-ui font-medium">
+                  <span className="sr-only">Actions</span>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -173,18 +230,72 @@ export default function AdminProductsPage() {
                       onChange={(next) => applyStock(row.id, next)}
                     />
                   </td>
-                  <td className="hidden py-3 sm:table-cell">
+                  <td className="hidden py-3 pr-4 sm:table-cell">
                     {row.amazonUrl ? (
                       <span className="text-moss">Linked</span>
                     ) : (
                       <span className="text-danger">Missing</span>
                     )}
                   </td>
+                  <td className="py-3 text-right align-top">
+                    {confirming === row.id ? (
+                      <div className="inline-flex flex-col items-end gap-1.5">
+                        <div className="flex flex-wrap justify-end gap-3 font-ui text-caption">
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => void removeRow(row)}
+                            className="text-danger underline underline-offset-2 disabled:opacity-50"
+                          >
+                            {busy ? 'Working…' : 'Delete for good'}
+                          </button>
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => void archiveRow(row)}
+                            className="text-ink underline underline-offset-2 disabled:opacity-50"
+                          >
+                            Archive
+                          </button>
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => {
+                              setConfirming(null);
+                              setError(null);
+                            }}
+                            className="text-ink-muted underline underline-offset-2 disabled:opacity-50"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                        {error?.id === row.id ? (
+                          <p
+                            role="alert"
+                            className="max-w-[28ch] text-right font-ui text-caption text-danger"
+                          >
+                            {error.message}
+                          </p>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setConfirming(row.id);
+                          setError(null);
+                        }}
+                        className="font-ui text-caption text-ink-muted underline underline-offset-2 hover:text-danger"
+                      >
+                        Remove<span className="sr-only"> {row.title}</span>
+                      </button>
+                    )}
+                  </td>
                 </tr>
               ))}
               {rows.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-8 text-center text-ink-muted">
+                  <td colSpan={7} className="py-8 text-center text-ink-muted">
                     Nothing matches that.
                   </td>
                 </tr>
