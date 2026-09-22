@@ -40,7 +40,7 @@ describe('productPath', () => {
     expect(productPath({ type: 'book', slug: 'soar' })).toBe('books/soar');
     expect(productPath({ type: 'magazine', slug: 'light-issue-4' })).toBe('magazine/light-issue-4');
     // Stationery has no section of its own; it lives in the unified shop.
-    expect(productPath({ type: 'stationery', slug: 'journal-moss' })).toBe('shop/journal-moss');
+    expect(productPath({ type: 'stationery', slug: 'journal-ako' })).toBe('shop/journal-ako');
   });
 
   it('falls back to the shop for an unknown type rather than guessing', () => {

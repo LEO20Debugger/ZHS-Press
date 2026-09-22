@@ -14,7 +14,7 @@ const BATCH_LIMIT = 200;
  * The storefront route for a product.
  *
  * Every product type has its own section, and stationery lives under /shop —
- * there is no /books/journal-moss. Exhaustive rather than a two-way guess,
+ * there is no /books/journal-ako. Exhaustive rather than a two-way guess,
  * because the email's only call to action is this link, and a 404 wastes the
  * one message this person gets.
  */

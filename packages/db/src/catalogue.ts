@@ -9,7 +9,9 @@
  * will theme itself in a colour its cover no longer contains. Every value here
  * carries its paired foreground at WCAG AA.
  *
- * Copy is placeholder pending approved wording.
+ * Book and magazine copy is placeholder pending approved wording. The
+ * stationery entries are real: names, meanings and specs are taken from the
+ * supplied Zeeoma cover artwork.
  */
 
 export interface CatalogueEntry {
@@ -202,43 +204,69 @@ export const CATALOGUE: CatalogueEntry[] = [
   },
 
   {
-    slug: 'journal-marigold',
+    slug: 'journal-anwulika',
     type: 'stationery',
     status: 'available',
-    title: 'The Marigold Journal',
-    subtitle: 'Lined, 160 pages',
-    blurb:
-      'A lay-flat notebook with an artist-designed cover, printed on paper that takes fountain ink without complaint.',
+    title: 'Anwulika',
+    subtitle: 'Lined A5 notebook, 120 pages',
+    blurb: 'The beautiful reminder that your joy will always outweigh your struggles.',
+    description:
+      'Anwulika — /Ah-nwoo-lee-kah/, noun: joy is greater. Use these pages to collect your wins, count your blessings, and remember who you are. Añụrị ga-adị — joy will remain.',
     priceCents: 2450,
-    accentHex: '#e6aa35',
-    accentTintHex: '#f8eeda',
+    // Sampled #ff3d19, lifted 3% toward paper: the sampled value lands at 4.41
+    // against ink, just under AA, and every accent here has to clear it.
+    accentHex: '#ff4320',
+    accentTintHex: '#fbe1d7',
     quantity: 60,
-    cover: 'journal-marigold.jpg',
+    cover: 'journal-anwulika.jpg',
     stationery: {
       dimensions: '148 × 210 mm (A5)',
-      material: 'Cloth-bound board, 100gsm paper',
-      pageCount: 160,
-      coverArtist: 'Ify Okonkwo',
+      material: 'Soft-touch cover, acid-free paper',
+      pageCount: 120,
+      coverArtist: 'Zeeoma',
     },
   },
   {
-    slug: 'journal-moss',
+    slug: 'journal-ako',
     type: 'stationery',
     status: 'available',
-    title: 'The Moss Journal',
-    subtitle: 'Dotted, 160 pages',
+    title: 'Ako',
+    subtitle: 'Lined A5 notebook, 120 pages',
     blurb:
-      'The same notebook, in a green you will want to keep on the desk rather than in a bag.',
+      'Designed for the deep thinkers, the strategy-planners, and the meticulous curators of their own lives.',
+    description:
+      'Ako — /ah-kaw/, noun: wisdom. A notebook built for absolute mental clarity. Mụọ amamihe.',
     priceCents: 2450,
-    accentHex: '#5a6946',
-    accentTintHex: '#e7e6dc',
-    quantity: 45,
-    cover: 'journal-moss.jpg',
+    accentHex: '#79d4cb',
+    accentTintHex: '#ebf3ec',
+    quantity: 60,
+    cover: 'journal-ako.jpg',
     stationery: {
       dimensions: '148 × 210 mm (A5)',
-      material: 'Cloth-bound board, 100gsm paper',
-      pageCount: 160,
-      coverArtist: 'Ify Okonkwo',
+      material: 'Soft-touch cover, acid-free paper',
+      pageCount: 120,
+      coverArtist: 'Zeeoma',
+    },
+  },
+  {
+    slug: 'journal-kpakpando',
+    type: 'stationery',
+    status: 'available',
+    title: 'Kpakpando',
+    subtitle: 'Lined A5 notebook, 120 pages',
+    blurb: 'More than just a light in the sky; it is the spark in your head.',
+    description:
+      'Kpakpando — /KPAH-KPAH-ndoh/, noun: star. Let this be your canvas for big dreams, small wins, and everything in between. Oya, shine your light.',
+    priceCents: 2450,
+    accentHex: '#ffa72f',
+    accentTintHex: '#fbedd9',
+    quantity: 60,
+    cover: 'journal-kpakpando.jpg',
+    stationery: {
+      dimensions: '148 × 210 mm (A5)',
+      material: 'Soft-touch cover, acid-free paper',
+      pageCount: 120,
+      coverArtist: 'Zeeoma',
     },
   },
 ];
