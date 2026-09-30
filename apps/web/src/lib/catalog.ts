@@ -70,12 +70,24 @@ export interface ListOptions {
   perPage?: number;
 }
 
+/**
+ * The statuses a shopper may see, mirroring PUBLIC_STATUSES in
+ * ProductsService. Drafts and archived titles are staff-only.
+ *
+ * Stated here as well because the fixture paths do their own filtering:
+ * without it a draft is visible under USE_FIXTURES and invisible against the
+ * real API, so the thing being reviewed is not the thing that ships.
+ */
+const PUBLIC_STATUSES = ['coming_soon', 'available', 'sold_out'];
+
+const isPublic = (item: { status: string }) => PUBLIC_STATUSES.includes(item.status);
+
 function paginateFixtures(options: ListOptions): Paginated<ProductSummary> {
   const page = options.page ?? 1;
   const perPage = options.perPage ?? 24;
 
-  let items = FIXTURE_SUMMARIES.filter((item) =>
-    options.category ? item.type === options.category : true,
+  let items = FIXTURE_SUMMARIES.filter(
+    (item) => isPublic(item) && (options.category ? item.type === options.category : true),
   );
   if (options.featured != null) {
     items = items.filter((item) => item.featured === options.featured);
@@ -120,7 +132,7 @@ export async function listProducts(options: ListOptions = {}): Promise<Paginated
 
 export async function getProduct(slug: string): Promise<ProductDetail | null> {
   if (USE_FIXTURES) {
-    return FIXTURE_PRODUCTS.find((product) => product.slug === slug) ?? null;
+    return FIXTURE_PRODUCTS.find((product) => product.slug === slug && isPublic(product)) ?? null;
   }
 
   try {
@@ -137,8 +149,8 @@ export async function getProduct(slug: string): Promise<ProductDetail | null> {
  */
 export async function listIssues(): Promise<ProductSummary[]> {
   if (USE_FIXTURES) {
-    return FIXTURE_SUMMARIES.filter((item) => item.type === 'magazine').sort((a, b) =>
-      (b.attribution ?? '').localeCompare(a.attribution ?? '', undefined, { numeric: true }),
+    return FIXTURE_SUMMARIES.filter((item) => item.type === 'magazine' && isPublic(item)).sort(
+      (a, b) => (b.attribution ?? '').localeCompare(a.attribution ?? '', undefined, { numeric: true }),
     );
   }
 
@@ -189,7 +201,7 @@ export async function getLatestIssue(): Promise<ProductSummary | null> {
  */
 export async function listAllSlugs(): Promise<Array<{ slug: string; type: ProductType }>> {
   if (USE_FIXTURES) {
-    return FIXTURE_SUMMARIES.map(({ slug, type }) => ({ slug, type }));
+    return FIXTURE_SUMMARIES.filter(isPublic).map(({ slug, type }) => ({ slug, type }));
   }
 
   try {

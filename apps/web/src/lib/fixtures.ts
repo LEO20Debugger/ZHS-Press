@@ -44,14 +44,24 @@ function product(fixture: Fixture): ProductDetail {
   };
 }
 
-function bookCover(filename: string, title: string) {
+/**
+ * Covers are not one shape — the picture books are 4:5, LIGHT is trade
+ * magazine, the journals are A5 — so the size is passed rather than assumed.
+ * The browser reserves space from these numbers, and a shared default made
+ * every non-4:5 cover shift the page as it loaded.
+ */
+function bookCover(filename: string, title: string, width: number, height: number) {
   return {
     url: `/covers/${filename}`,
     alt: `Cover artwork for ${title}`,
-    width: 896,
-    height: 1200,
+    width,
+    height,
   };
 }
+
+const BOOK = [960, 1200] as const;
+const MAGAZINE = [927, 1200] as const;
+const JOURNAL = [846, 1200] as const;
 
 const ACCENTS = {
   /**
@@ -60,13 +70,15 @@ const ACCENTS = {
    * `foreground` is whichever of --ink / --paper-raised actually passes
    * contrast on that colour; every one of these clears WCAG AA.
    */
-  soar: { accent: '#ac452c', tint: '#f1e2d8', foreground: '#fffefa' },
-  turnaspurn: { accent: '#627343', tint: '#e8e7db', foreground: '#fffefa' },
-  bloom: { accent: '#c97c5b', tint: '#f4e8de', foreground: '#1e2525' },
-  brightStar: { accent: '#eba81c', tint: '#f8eed7', foreground: '#1e2525' },
-  lightFour: { accent: '#2b4768', tint: '#e1e2e0', foreground: '#fffefa' },
-  lightThree: { accent: '#e4cd9c', tint: '#f7f2e6', foreground: '#1e2525' },
-  lightTwo: { accent: '#c88564', tint: '#f4e9df', foreground: '#1e2525' },
+  soar: { accent: '#98c5a7', tint: '#eef1e7', foreground: '#1e2525' },
+  turnaspurn: { accent: '#5a444a', tint: '#e7e2dc', foreground: '#fffefa' },
+  bloom: { accent: '#fbbb64', tint: '#faf0df', foreground: '#1e2525' },
+  brightStar: { accent: '#7ba4d7', tint: '#ebeded', foreground: '#1e2525' },
+  lightFour: { accent: '#592c28', tint: '#e7dfd8', foreground: '#fffefa' },
+  lightThree: { accent: '#f47624', tint: '#f9e8d8', foreground: '#1e2525' },
+  lightTwo: { accent: '#293a45', tint: '#e1e0db', foreground: '#fffefa' },
+  lightOne: { accent: '#17773b', tint: '#dfe8da', foreground: '#fffefa' },
+  lightJournal: { accent: '#466758', tint: '#e4e6de', foreground: '#fffefa' },
   journalAnwulika: { accent: '#ff4320', tint: '#fbe1d7', foreground: '#1e2525' },
   journalAko: { accent: '#79d4cb', tint: '#ebf3ec', foreground: '#1e2525' },
   journalKpakpando: { accent: '#ffa72f', tint: '#fbedd9', foreground: '#1e2525' },
@@ -91,12 +103,12 @@ export const FIXTURE_PRODUCTS: ProductDetail[] = [
     amazonUrl: 'https://www.amazon.com/dp/EXAMPLE-SOAR',
     accent: ACCENTS.soar,
     featured: true,
-    coverImage: bookCover('soar.jpg', 'Soar'),
-    images: [bookCover('soar.jpg', 'Soar')],
-    attribution: 'Zainab H. Suleiman',
+    coverImage: bookCover('soar.jpg', 'Soar', ...BOOK),
+    images: [bookCover('soar.jpg', 'Soar', ...BOOK)],
+    attribution: 'Juliet Isioma Ezepue',
     book: {
-      authorName: 'Zainab H. Suleiman',
-      illustratorName: 'Ify Okonkwo',
+      authorName: 'Juliet Isioma Ezepue',
+      illustratorName: 'Tooba Alam',
       isbn: '978-1-0000000-1-1',
       pageCount: 40,
       format: 'Hardcover',
@@ -112,12 +124,12 @@ export const FIXTURE_PRODUCTS: ProductDetail[] = [
     slug: 'turnaspurn',
     type: 'book',
     status: 'coming_soon',
-    title: 'TurnaSpurn',
+    title: 'Tales of TurnaSpurn Street',
     subtitle: 'A tale told backwards, then forwards again',
     blurb:
       'A word that means nothing until you say it twice. A village that only appears to those willing to walk home the long way.',
     description:
-      'TurnaSpurn is a folk tale in the shape of a riddle — read once for the story, again for what the story was hiding.',
+      'Tales of TurnaSpurn Street is a folk tale in the shape of a riddle — read once for the story, again for what the story was hiding.',
     priceCents: 1699,
     compareAtCents: null,
     currency: 'USD',
@@ -125,12 +137,12 @@ export const FIXTURE_PRODUCTS: ProductDetail[] = [
     amazonUrl: null,
     accent: ACCENTS.turnaspurn,
     featured: true,
-    coverImage: bookCover('turnaspurn.jpg', 'TurnaSpurn'),
-    images: [bookCover('turnaspurn.jpg', 'TurnaSpurn')],
-    attribution: 'Ekene Adeyemi',
+    coverImage: bookCover('turnaspurn.jpg', 'Tales of TurnaSpurn Street', ...BOOK),
+    images: [bookCover('turnaspurn.jpg', 'Tales of TurnaSpurn Street', ...BOOK)],
+    attribution: 'Lotanna Ezepue',
     book: {
-      authorName: 'Ekene Adeyemi',
-      illustratorName: null,
+      authorName: 'Lotanna Ezepue',
+      illustratorName: 'Tooba Alam',
       isbn: null,
       pageCount: 56,
       format: 'Hardcover',
@@ -161,12 +173,12 @@ export const FIXTURE_PRODUCTS: ProductDetail[] = [
     amazonUrl: 'https://www.amazon.com/dp/EXAMPLE-BLOOM',
     accent: ACCENTS.bloom,
     featured: false,
-    coverImage: bookCover('bloom.jpg', 'Bloom'),
-    images: [bookCover('bloom.jpg', 'Bloom')],
-    attribution: 'Zainab H. Suleiman',
+    coverImage: bookCover('bloom.jpg', 'Bloom', ...BOOK),
+    images: [bookCover('bloom.jpg', 'Bloom', ...BOOK)],
+    attribution: 'Juliet Isioma Ezepue',
     book: {
-      authorName: 'Zainab H. Suleiman',
-      illustratorName: 'Ify Okonkwo',
+      authorName: 'Juliet Isioma Ezepue',
+      illustratorName: 'Maria Noemi Manalang',
       isbn: '978-1-0000000-2-8',
       pageCount: 36,
       format: 'Paperback',
@@ -194,12 +206,12 @@ export const FIXTURE_PRODUCTS: ProductDetail[] = [
     amazonUrl: 'https://www.amazon.com/dp/EXAMPLE-BRIGHTSTAR',
     accent: ACCENTS.brightStar,
     featured: false,
-    coverImage: bookCover('bright-star.jpg', 'Bright Star'),
-    images: [bookCover('bright-star.jpg', 'Bright Star')],
-    attribution: 'Amara Nwosu',
+    coverImage: bookCover('bright-star.jpg', 'Bright Star', ...BOOK),
+    images: [bookCover('bright-star.jpg', 'Bright Star', ...BOOK)],
+    attribution: 'Juliet Isioma Ezepue',
     book: {
-      authorName: 'Amara Nwosu',
-      illustratorName: null,
+      authorName: 'Juliet Isioma Ezepue',
+      illustratorName: 'Maria Noemi Manalang',
       isbn: '978-1-0000000-3-5',
       pageCount: 32,
       format: 'Paperback',
@@ -218,9 +230,8 @@ export const FIXTURE_PRODUCTS: ProductDetail[] = [
     type: 'magazine',
     status: 'available',
     title: 'LIGHT, Issue Four',
-    subtitle: 'Inheritance',
-    blurb:
-      'What gets handed down that nobody chose to hand down. Twenty-two writers and artists on inheritance.',
+    subtitle: 'Healthy spaces and places',
+    blurb: 'How might we create healthy spaces and places for all?',
     description: null,
     priceCents: 1200,
     compareAtCents: null,
@@ -229,15 +240,14 @@ export const FIXTURE_PRODUCTS: ProductDetail[] = [
     amazonUrl: null,
     accent: ACCENTS.lightFour,
     featured: true,
-    coverImage: bookCover('light-issue-4.jpg', 'LIGHT, Issue Four'),
-    images: [bookCover('light-issue-4.jpg', 'LIGHT, Issue Four')],
+    coverImage: bookCover('light-issue-4.jpg', 'LIGHT, Issue Four', ...MAGAZINE),
+    images: [bookCover('light-issue-4.jpg', 'LIGHT, Issue Four', ...MAGAZINE)],
     attribution: 'Issue 4',
     book: null,
     issue: {
       issueNumber: 4,
-      theme: 'Inheritance',
-      editorNote:
-        'We asked for work about what gets passed on. Almost everything we received was about hands.',
+      theme: 'Healthy spaces and places',
+      editorNote: null,
       publishedDate: '2025-07-01',
       isLatest: true,
       latestUntil: null,
@@ -257,8 +267,9 @@ export const FIXTURE_PRODUCTS: ProductDetail[] = [
     type: 'magazine',
     status: 'sold_out',
     title: 'LIGHT, Issue Three',
-    subtitle: 'Repair',
-    blurb: 'On mending, and on the things that are better for having been broken.',
+    subtitle: 'Healing and transformation with cancer',
+    blurb:
+      'How might we reimagine healing and transformation with cancer through art, letters, stories, and poetry?',
     description: null,
     priceCents: 1200,
     compareAtCents: null,
@@ -267,13 +278,13 @@ export const FIXTURE_PRODUCTS: ProductDetail[] = [
     amazonUrl: null,
     accent: ACCENTS.lightThree,
     featured: false,
-    coverImage: bookCover('light-issue-3.jpg', 'LIGHT, Issue Three'),
-    images: [bookCover('light-issue-3.jpg', 'LIGHT, Issue Three')],
+    coverImage: bookCover('light-issue-3.jpg', 'LIGHT, Issue Three', ...MAGAZINE),
+    images: [bookCover('light-issue-3.jpg', 'LIGHT, Issue Three', ...MAGAZINE)],
     attribution: 'Issue 3',
     book: null,
     issue: {
       issueNumber: 3,
-      theme: 'Repair',
+      theme: 'Healing and transformation with cancer',
       editorNote: null,
       publishedDate: '2024-11-04',
       isLatest: false,
@@ -290,8 +301,9 @@ export const FIXTURE_PRODUCTS: ProductDetail[] = [
     type: 'magazine',
     status: 'sold_out',
     title: 'LIGHT, Issue Two',
-    subtitle: 'Thresholds',
-    blurb: 'Doorways, waiting rooms, and the minute before the news.',
+    subtitle: 'Wellness in public health',
+    blurb:
+      'How might we reflect and reimagine wellness in public health as art, letters, stories, and poetry?',
     description: null,
     priceCents: 1000,
     compareAtCents: null,
@@ -300,15 +312,53 @@ export const FIXTURE_PRODUCTS: ProductDetail[] = [
     amazonUrl: null,
     accent: ACCENTS.lightTwo,
     featured: false,
-    coverImage: bookCover('light-issue-2.jpg', 'LIGHT, Issue Two'),
-    images: [bookCover('light-issue-2.jpg', 'LIGHT, Issue Two')],
+    coverImage: bookCover('light-issue-2.jpg', 'LIGHT, Issue Two', ...MAGAZINE),
+    images: [bookCover('light-issue-2.jpg', 'LIGHT, Issue Two', ...MAGAZINE)],
     attribution: 'Issue 2',
     book: null,
     issue: {
       issueNumber: 2,
-      theme: 'Thresholds',
+      theme: 'Wellness in public health',
       editorNote: null,
       publishedDate: '2023-10-02',
+      isLatest: false,
+      latestUntil: null,
+      contributors: [],
+    },
+    stationery: null,
+    seoTitle: null,
+    seoDescription: null,
+  }),
+
+  product({
+    /*
+     * Draft, like its catalogue entry: the printed cover gives a price and
+     * nothing else, so status and stock are still the press's to confirm.
+     */
+    id: 13,
+    slug: 'light-issue-1',
+    type: 'magazine',
+    status: 'draft',
+    title: 'LIGHT, Issue One',
+    subtitle: 'Public health as art',
+    blurb: 'How might we recreate public health as art, letters, stories, and poetry?',
+    description: null,
+    priceCents: 1499,
+    compareAtCents: null,
+    currency: 'USD',
+    releaseDate: null,
+    amazonUrl: null,
+    accent: ACCENTS.lightOne,
+    featured: false,
+    coverImage: bookCover('light-issue-1.jpg', 'LIGHT, Issue One', ...MAGAZINE),
+    images: [bookCover('light-issue-1.jpg', 'LIGHT, Issue One', ...MAGAZINE)],
+    attribution: 'Issue 1',
+    book: null,
+    issue: {
+      issueNumber: 1,
+      theme: 'Public health as art',
+      editorNote: null,
+      publishedDate: null,
       isLatest: false,
       latestUntil: null,
       contributors: [],
@@ -337,8 +387,8 @@ export const FIXTURE_PRODUCTS: ProductDetail[] = [
     amazonUrl: null,
     accent: ACCENTS.journalAnwulika,
     featured: false,
-    coverImage: bookCover('journal-anwulika.jpg', 'Anwulika'),
-    images: [bookCover('journal-anwulika.jpg', 'Anwulika')],
+    coverImage: bookCover('journal-anwulika.jpg', 'Anwulika', ...JOURNAL),
+    images: [bookCover('journal-anwulika.jpg', 'Anwulika', ...JOURNAL)],
     attribution: 'Cover by Zeeoma',
     book: null,
     issue: null,
@@ -369,8 +419,8 @@ export const FIXTURE_PRODUCTS: ProductDetail[] = [
     amazonUrl: null,
     accent: ACCENTS.journalAko,
     featured: false,
-    coverImage: bookCover('journal-ako.jpg', 'Ako'),
-    images: [bookCover('journal-ako.jpg', 'Ako')],
+    coverImage: bookCover('journal-ako.jpg', 'Ako', ...JOURNAL),
+    images: [bookCover('journal-ako.jpg', 'Ako', ...JOURNAL)],
     attribution: 'Cover by Zeeoma',
     book: null,
     issue: null,
@@ -401,8 +451,8 @@ export const FIXTURE_PRODUCTS: ProductDetail[] = [
     amazonUrl: null,
     accent: ACCENTS.journalKpakpando,
     featured: false,
-    coverImage: bookCover('journal-kpakpando.jpg', 'Kpakpando'),
-    images: [bookCover('journal-kpakpando.jpg', 'Kpakpando')],
+    coverImage: bookCover('journal-kpakpando.jpg', 'Kpakpando', ...JOURNAL),
+    images: [bookCover('journal-kpakpando.jpg', 'Kpakpando', ...JOURNAL)],
     attribution: 'Cover by Zeeoma',
     book: null,
     issue: null,
@@ -411,6 +461,41 @@ export const FIXTURE_PRODUCTS: ProductDetail[] = [
       material: 'Soft-touch cover, acid-free paper',
       pageCount: 120,
       coverArtist: 'Zeeoma',
+    },
+    seoTitle: null,
+    seoDescription: null,
+  }),
+  product({
+    /*
+     * Draft: nothing on the cover gives a price or a page count, and the
+     * figure below is the Zeeoma journals' price standing in until the press
+     * sets a real one.
+     */
+    id: 23,
+    slug: 'light-journal',
+    type: 'stationery',
+    status: 'draft',
+    title: 'LIGHT Journal',
+    subtitle: 'You are gonna wanna write this down.',
+    blurb: 'The companion journal to LIGHT, for the writing the magazine starts.',
+    description: null,
+    priceCents: 2450,
+    compareAtCents: null,
+    currency: 'USD',
+    releaseDate: null,
+    amazonUrl: null,
+    accent: ACCENTS.lightJournal,
+    featured: false,
+    coverImage: bookCover('light-journal.jpg', 'LIGHT Journal', ...JOURNAL),
+    images: [bookCover('light-journal.jpg', 'LIGHT Journal', ...JOURNAL)],
+    attribution: 'ZHS Press',
+    book: null,
+    issue: null,
+    stationery: {
+      dimensions: null,
+      material: null,
+      pageCount: null,
+      coverArtist: 'ZHS Press',
     },
     seoTitle: null,
     seoDescription: null,

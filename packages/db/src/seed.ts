@@ -93,8 +93,8 @@ async function main(): Promise<void> {
           productId: existing.id,
           url: `/covers/${entry.cover}`,
           alt: `Cover artwork for ${entry.title}`,
-          width: 896,
-          height: 1200,
+          width: entry.coverWidth,
+          height: entry.coverHeight,
           position: 0,
         });
         console.log(`Added missing cover for ${entry.title}`);
@@ -127,8 +127,8 @@ async function main(): Promise<void> {
       productId: id,
       url: `/covers/${entry.cover}`,
       alt: `Cover artwork for ${entry.title}`,
-      width: 896,
-      height: 1200,
+      width: entry.coverWidth,
+      height: entry.coverHeight,
       position: 0,
     });
 
