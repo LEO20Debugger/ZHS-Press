@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, type DragEvent, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type DragEvent } from 'react';
 import { deriveTint, validateAccent } from '@zhs/ui';
 import { Button } from '../primitives';
 
@@ -334,8 +334,7 @@ export function ProductImages({
     }
   }
 
-  async function addImage(event: FormEvent) {
-    event.preventDefault();
+  async function addImage() {
     setBusy(true);
     setMessage(null);
 
@@ -557,7 +556,15 @@ export function ProductImages({
         <summary className="cursor-pointer text-caption text-ink-muted">
           Or reference an image by path
         </summary>
-        <form onSubmit={addImage} className="mt-3 flex gap-3">
+        {/*
+          A group, not a <form>. This panel renders inside the product page's
+          own <form>, and a form inside a form is invalid HTML: the browser
+          handed the Add button to the outer form, so pressing it did a native
+          page submit — the page reloaded, the typed path vanished, and no
+          image request was ever sent. Enter is handled by hand to keep the
+          keyboard behaviour a form would have given.
+        */}
+        <div role="group" aria-label="Add an image by path" className="mt-3 flex gap-3">
           <label htmlFor="image-url" className="sr-only">
             Image path or URL
           </label>
@@ -565,16 +572,23 @@ export function ProductImages({
             id="image-url"
             value={url}
             onChange={(event) => setUrl(event.target.value)}
+            onKeyDown={(event) => {
+              // Also stops Enter here from submitting the product form around it.
+              if (event.key === 'Enter') {
+                event.preventDefault();
+                if (!busy) void addImage();
+              }
+            }}
             placeholder="/covers/soar.jpg"
             className={FIELD}
           />
           {/* Same trap as the Upload button: missing alt text is reported, not
               silently enforced by a dead control. Only an in-flight request
               disables this. */}
-          <Button type="submit" disabled={busy} variant="outline">
+          <Button disabled={busy} variant="outline" onClick={() => void addImage()}>
             Add
           </Button>
-        </form>
+        </div>
       </details>
 
       {/*
