@@ -455,17 +455,37 @@
   }
 
   .cover-mount img {
+    /*
+     * Fills the mount so its space is reserved before the image loads; the
+     * picture is letterboxed inside that box by `contain`. Covers come in
+     * three shapes — 4:5 books, trade-magazine LIGHT, A5 journals — and only
+     * the picture, not the box, matches any given one.
+     */
     width: 100%;
     height: 100%;
     object-fit: contain;
     /*
+     * A filter shadow, not a box-shadow, and that is the whole fix.
+     *
+     * box-shadow is painted on the element box, which here is the full mount
+     * rather than the picture. While every cover shared one shape the two
+     * coincided; once a 4:5 book sat in the frame the shadow outlined empty
+     * letterbox, and its downward offset read as a ledge under the cover.
+     * drop-shadow follows the painted pixels instead — the letterbox is
+     * transparent — so it lands on the edge of the artwork at any shape.
+     *
+     * (Sizing the img to its content was tried and rejected: with width and
+     * height both auto, the width/height attributes stop reserving space, so
+     * an unloaded cover collapses to nothing and the page shifts as it loads.)
+     *
      * Ink-toned, not grey. The palette has no neutral grey, and a default
      * black shadow would introduce one — this is the same hue as --ink at low
-     * alpha, so it reads as depth rather than as a foreign colour.
+     * alpha, so it reads as depth rather than as a foreign colour. No spread
+     * value exists for drop-shadow, so the second layer is tighter than the
+     * box-shadow it replaces to keep the weight under the cover, not beside it.
      */
-    box-shadow:
-      0 1px 2px rgba(30, 37, 37, 0.1),
-      0 8px 22px -8px rgba(30, 37, 37, 0.3);
+    filter: drop-shadow(0 1px 1px rgba(30, 37, 37, 0.12))
+      drop-shadow(0 6px 9px rgba(30, 37, 37, 0.22));
     transition: transform var(--duration-slow) var(--ease-out);
   }
 
