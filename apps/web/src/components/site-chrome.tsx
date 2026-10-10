@@ -9,7 +9,7 @@ import { DESKTOP_NAV, FOOTER_NAV } from './nav-items';
 
 const SOCIAL = [
   { href: 'https://www.instagram.com/zhspress', label: 'Instagram' },
-  { href: 'https://www.linkedin.com/company/zhspress', label: 'LinkedIn' },
+  { href: 'https://www.linkedin.com/company/zenith-highest-story-telling-press/', label: 'LinkedIn' },
 ] as const;
 
 export function SiteHeader() {
@@ -110,6 +110,8 @@ export function SiteFooter() {
                     className="link-underline text-small"
                   >
                     {item.label}
+                    <span aria-hidden="true"> ↗</span>
+                    <span className="sr-only"> (opens in a new tab)</span>
                   </a>
                 </li>
               ))}
