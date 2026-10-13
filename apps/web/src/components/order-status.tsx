@@ -65,10 +65,10 @@ export function OrderStatusPanel({ orderNumber }: { orderNumber: string }) {
     }
 
     /*
-     * Flutterwave sends the customer back with ?transaction_id=… on the URL.
-     * That parameter proves nothing on its own — anyone can type it — so it is
+     * Stripe sends the customer back with ?session_id=… on the URL. That
+     * parameter proves nothing on its own — anyone can type it — so it is
      * handed to the API purely as a pointer, and the API verifies it with
-     * Flutterwave before anything settles.
+     * Stripe before anything settles.
      *
      * This runs once, before polling, and only covers the case where the
      * webhook has not arrived. If it has, the API sees a non-pending order and
@@ -79,14 +79,14 @@ export function OrderStatusPanel({ orderNumber }: { orderNumber: string }) {
      * a Suspense boundary for a value we only need after mount.
      */
     async function start() {
-      const transactionId = new URLSearchParams(window.location.search).get('transaction_id');
+      const sessionId = new URLSearchParams(window.location.search).get('session_id');
 
-      if (transactionId && /^\d{1,32}$/.test(transactionId)) {
+      if (sessionId && /^cs_(test|live)_[A-Za-z0-9]{1,250}$/.test(sessionId)) {
         try {
           await fetch(`/api/orders/${encodeURIComponent(orderNumber)}/reconcile`, {
             method: 'POST',
             headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ transactionId }),
+            body: JSON.stringify({ sessionId }),
           });
         } catch {
           // Nothing to do — poll() below reads the real status either way.

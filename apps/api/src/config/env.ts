@@ -62,13 +62,16 @@ const envSchema = z.object({
   ASSET_BASE_URL: z.string().default('http://localhost:4000/uploads'),
 
   // Payment configuration is optional at boot so the catalogue can be built and
-  // reviewed before the Flutterwave account is confirmed. CheckoutService
-  // asserts these are present the moment it is actually used — see
-  // requirePaymentConfig() below.
-  FLW_PUBLIC_KEY: z.string().optional(),
-  FLW_SECRET_KEY: z.string().optional(),
-  FLW_SECRET_HASH: z.string().optional(),
-  FLW_BASE_URL: z.string().url().default('https://api.flutterwave.com/v3'),
+  // reviewed before the Stripe account is ready. CheckoutService asserts these
+  // are present the moment it is actually used — see requirePaymentConfig()
+  // below.
+  //
+  // In production use a RESTRICTED key (rk_live_…), not the account's main
+  // secret key. The account is shared with another business, and a key scoped
+  // to Checkout Sessions cannot touch that business's payments if it leaks.
+  STRIPE_SECRET_KEY: z.string().optional(),
+  /** The endpoint's signing secret (whsec_…), from the webhook's page in Stripe. */
+  STRIPE_WEBHOOK_SECRET: z.string().optional(),
 
   /**
    * Outbound email.
@@ -166,23 +169,21 @@ export function validateEnv(raw: Record<string, unknown>): Env {
 }
 
 export interface PaymentConfig {
-  publicKey: string;
   secretKey: string;
-  secretHash: string;
-  baseUrl: string;
+  webhookSecret: string;
 }
 
 /**
  * Payments cannot run half-configured.
  *
- * FLW_SECRET_HASH in particular is not optional in any meaningful sense: it is
- * the only thing separating a real webhook from anyone on the internet who can
- * reach the endpoint and would like their order marked paid.
+ * STRIPE_WEBHOOK_SECRET in particular is not optional in any meaningful sense:
+ * it is the only thing separating a real webhook from anyone on the internet
+ * who can reach the endpoint and would like their order marked paid.
  */
 export function requirePaymentConfig(env: Env): PaymentConfig {
-  const missing = (
-    ['FLW_PUBLIC_KEY', 'FLW_SECRET_KEY', 'FLW_SECRET_HASH'] as const
-  ).filter((key) => !env[key]);
+  const missing = (['STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET'] as const).filter(
+    (key) => !env[key],
+  );
 
   if (missing.length > 0) {
     throw new Error(
@@ -192,9 +193,7 @@ export function requirePaymentConfig(env: Env): PaymentConfig {
   }
 
   return {
-    publicKey: env.FLW_PUBLIC_KEY as string,
-    secretKey: env.FLW_SECRET_KEY as string,
-    secretHash: env.FLW_SECRET_HASH as string,
-    baseUrl: env.FLW_BASE_URL,
+    secretKey: env.STRIPE_SECRET_KEY as string,
+    webhookSecret: env.STRIPE_WEBHOOK_SECRET as string,
   };
 }

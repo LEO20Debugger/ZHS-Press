@@ -234,7 +234,7 @@ export function OrderDetailPanel({
                   value={formatMoney(payment.amountCents, payment.currency as Currency)}
                 />
                 {/*
-                  The provider reference is the thing you quote to Flutterwave
+                  The provider reference is the thing you search for in Stripe
                   support when a customer says they paid and the order says
                   otherwise, so it is shown in full rather than truncated.
                 */}

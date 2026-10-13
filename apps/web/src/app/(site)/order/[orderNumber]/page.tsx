@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 };
 
 /**
- * Where Flutterwave sends the customer back after payment.
+ * Where Stripe sends the customer back after payment.
  *
  * The query parameters on that redirect are attacker-controlled and are
  * deliberately ignored — this page reads the order's real status from our own

@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { callCartApi, readCartToken } from '@/lib/cart-session';
 
 /**
- * Starts checkout and returns the Flutterwave payment link.
+ * Starts checkout and returns the Stripe Checkout link.
  *
  * The body carries contact and address details only. No prices, no totals —
  * the API loads the cart server-side and recomputes everything.

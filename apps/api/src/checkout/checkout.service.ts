@@ -17,7 +17,7 @@ import type { Env } from '../config/env';
 import { CartService } from '../cart/cart.service';
 import { MailService } from '../mail/mail.service';
 import { orderReceipt, url } from '../mail/templates';
-import { FlutterwaveService } from '../payments/flutterwave.service';
+import { StripeService } from '../payments/stripe.service';
 
 /** Human-readable, unambiguous: no O/0 or I/1 confusion when read aloud. */
 const ORDER_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -38,7 +38,7 @@ export class CheckoutService {
   constructor(
     @Inject(DB) private readonly db: Database,
     private readonly cart: CartService,
-    private readonly flutterwave: FlutterwaveService,
+    private readonly stripe: StripeService,
     private readonly config: ConfigService<Env, true>,
     private readonly mail: MailService,
   ) {}
@@ -96,7 +96,7 @@ export class CheckoutService {
     const totals = calculateOrderTotals(priceable, { shipping: shippingRate });
 
     const orderNumber = generateOrderNumber();
-    const txRef = FlutterwaveService.generateTxRef(orderNumber);
+    const txRef = StripeService.generateTxRef(orderNumber);
 
     // Recorded now, while we still hold the session token. The webhook that
     // settles this order will not have one.
@@ -137,7 +137,7 @@ export class CheckoutService {
 
       await tx.insert(schema.payments).values({
         orderId: newOrderId,
-        provider: 'flutterwave',
+        provider: 'stripe',
         txRef,
         amountCents: totals.totalCents,
         currency: totals.currency,
@@ -149,24 +149,35 @@ export class CheckoutService {
 
     this.logger.log(`Order ${orderNumber} (#${orderId}) created, awaiting payment`);
 
-    const paymentLink = await this.flutterwave.createPaymentLink({
+    const webBaseUrl = this.config.get('WEB_BASE_URL', { infer: true });
+    const { url: paymentLink } = await this.stripe.createCheckoutSession({
       txRef,
-      amountCents: totals.totalCents,
+      orderNumber,
       currency: totals.currency,
       customerEmail: input.email,
-      customerName: input.shippingAddress.name,
-      title: 'ZHS Press',
-      redirectUrl: `${this.config.get('WEB_BASE_URL', { infer: true })}/order/${orderNumber}`,
+      lines: totals.lines.map((line) => ({
+        title: priceable.find((entry) => entry.productId === line.productId)?.title ?? 'Item',
+        unitPriceCents: line.unitPriceCents,
+        quantity: line.quantity,
+      })),
+      shippingCents: totals.shippingCents,
+      taxCents: totals.taxCents,
+      // {CHECKOUT_SESSION_ID} is filled in by Stripe, and is what the
+      // confirmation page hands back to reconcileFromRedirect.
+      successUrl: `${webBaseUrl}/order/${orderNumber}?session_id={CHECKOUT_SESSION_ID}`,
+      // Back to the basket, untouched, so they can simply try again. The order
+      // stays pending until the session expires.
+      cancelUrl: `${webBaseUrl}/cart`,
     });
 
     return { orderNumber, paymentLink };
   }
 
   /**
-   * Handles a verified Flutterwave transaction.
+   * Handles a payment whose outcome has been confirmed with Stripe.
    *
    * This is the ONLY path that can mark an order paid. The browser redirect back
-   * from Flutterwave carries attacker-controlled query parameters and grants
+   * from Stripe carries attacker-controlled query parameters and grants
    * nothing.
    *
    * Idempotency is enforced by a conditional UPDATE on the ORDER row rather
@@ -341,7 +352,7 @@ export class CheckoutService {
      * recoverable; the reverse is not.
      *
      * Only the winner, because `already_settled` is the normal case for a
-     * redelivered webhook, and Flutterwave redelivers. Sending on every
+     * redelivered webhook, and Stripe redelivers. Sending on every
      * delivery would mail the customer two or three times for one order.
      */
     if (outcome.receipt) {
@@ -356,7 +367,7 @@ export class CheckoutService {
    * Emails the order receipt.
    *
    * Failure is swallowed after logging, deliberately. The caller is the
-   * Flutterwave webhook, and a non-2xx response makes Flutterwave redeliver —
+   * Stripe webhook, and a non-2xx response makes Stripe redeliver —
    * which would hit `already_settled`, so the retry could never send the
    * receipt anyway, while making the provider's dashboard show a failing
    * endpoint for a payment that settled perfectly.
@@ -424,13 +435,13 @@ export class CheckoutService {
    * no receipt and no stock movement.
    *
    * The trust model is unchanged. The redirect's query string is not evidence
-   * of anything; `transactionId` is taken from it only as a POINTER, and what
-   * settles the order is Flutterwave's own answer about that transaction —
-   * exactly the call the webhook path makes. `settlePayment` then re-asserts
-   * amount and currency and claims the payment atomically, so arriving here
-   * twice, or here and by webhook at once, still settles once.
+   * of anything; `sessionId` is taken from it only as a POINTER, and what
+   * settles the order is Stripe's own answer about that session — exactly the
+   * call the webhook path makes. `settlePayment` then re-asserts amount and
+   * currency and claims the payment atomically, so arriving here twice, or
+   * here and by webhook at once, still settles once.
    */
-  async reconcileFromRedirect(orderNumber: string, transactionId: string): Promise<OrderView> {
+  async reconcileFromRedirect(orderNumber: string, sessionId: string): Promise<OrderView> {
     const order = await this.db.query.orders.findFirst({
       where: eq(schema.orders.orderNumber, orderNumber),
     });
@@ -438,16 +449,16 @@ export class CheckoutService {
     if (!order) throw new NotFoundException('Order not found');
 
     /*
-     * Already decided — return without calling Flutterwave. This endpoint is
+     * Already decided — return without calling Stripe. This endpoint is
      * reachable by anyone holding an order number, and an unconditional
      * outbound call per request would let a stranger drive our request rate at
      * the provider using nothing but page reloads.
      */
     if (order.status !== 'pending') return this.findOrder(orderNumber);
 
-    let verified: Awaited<ReturnType<FlutterwaveService['verifyTransaction']>>;
+    let verified: Awaited<ReturnType<StripeService['verifySession']>>;
     try {
-      verified = await this.flutterwave.verifyTransaction(transactionId);
+      verified = await this.stripe.verifySession(sessionId);
     } catch (error) {
       /*
        * A failed lookup is not a failed payment. The webhook may still be on
@@ -455,17 +466,21 @@ export class CheckoutService {
        * stand as pending.
        */
       this.logger.warn(
-        `Could not verify transaction ${transactionId} for ${orderNumber} from ` +
+        `Could not verify session ${sessionId} for ${orderNumber} from ` +
           `redirect: ${error instanceof Error ? error.message : 'unknown error'}`,
       );
       return this.findOrder(orderNumber);
     }
 
+    // Not decided yet, or not a session this shop created. Either way there is
+    // nothing to settle; the page keeps polling and the webhook decides.
+    if (verified === null) return this.findOrder(orderNumber);
+
     /*
-     * The transaction must belong to THIS order. Flutterwave is authoritative
-     * about the transaction, but the id reached us through a URL, so it can
-     * name a payment that is real, successful, and somebody else's. Settling on
-     * it would mark this order paid against a stranger's money.
+     * The session must belong to THIS order. Stripe is authoritative about the
+     * session, but the id reached us through a URL, so it can name a payment
+     * that is real, successful, and somebody else's. Settling on it would mark
+     * this order paid against a stranger's money.
      */
     const payment = await this.db.query.payments.findFirst({
       where: eq(schema.payments.txRef, verified.txRef),
@@ -473,7 +488,7 @@ export class CheckoutService {
 
     if (!payment || payment.orderId !== order.id) {
       this.logger.warn(
-        `Redirect for ${orderNumber} carried transaction ${transactionId}, which ` +
+        `Redirect for ${orderNumber} carried session ${sessionId}, which ` +
           'belongs to a different order. Ignored.',
       );
       return this.findOrder(orderNumber);

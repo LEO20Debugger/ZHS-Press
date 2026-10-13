@@ -107,7 +107,7 @@ export function calculateOrderTotals(
 /**
  * Confirms a provider's reported payment matches what we asked to be charged.
  *
- * This is the check that stops the classic Flutterwave failure: a webhook that
+ * This is the check that stops the classic payment-webhook failure: a webhook that
  * says "successful" is not evidence that the right amount, in the right
  * currency, was paid against the right order.
  */

@@ -36,7 +36,7 @@ export class ResendTransport {
   /**
    * @param timeoutMs Bounds the request. Without it a hung provider holds the
    *   caller open indefinitely — and one of those callers is the payment
-   *   webhook, which Flutterwave will redeliver if we take too long to answer.
+   *   webhook, which Stripe will redeliver if we take too long to answer.
    */
   async send(
     to: string,

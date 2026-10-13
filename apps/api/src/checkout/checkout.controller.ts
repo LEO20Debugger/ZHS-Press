@@ -14,14 +14,14 @@ import { ZodValidationPipe } from '../common/zod-validation.pipe';
 import { CheckoutService } from './checkout.service';
 
 /**
- * Flutterwave's transaction id, lifted off the redirect's query string.
+ * Stripe's Checkout Session id, lifted off the redirect's query string.
  *
- * Bounded and digits-only because it is a pointer we are about to put into an
- * outbound URL. The value is never trusted as evidence — see
- * `reconcileFromRedirect` — but it should not be arbitrary text either.
+ * Shape-checked because it is a pointer we are about to send to Stripe. The
+ * value is never trusted as evidence — see `reconcileFromRedirect` — but it
+ * should not be arbitrary text either.
  */
 const reconcileSchema = z.object({
-  transactionId: z.string().regex(/^\d{1,32}$/),
+  sessionId: z.string().regex(/^cs_(test|live)_[A-Za-z0-9]{1,250}$/),
 });
 
 @Controller()
@@ -58,8 +58,8 @@ export class CheckoutController {
   @HttpCode(200)
   reconcile(
     @Param('orderNumber') orderNumber: string,
-    @Body(new ZodValidationPipe(reconcileSchema)) body: { transactionId: string },
+    @Body(new ZodValidationPipe(reconcileSchema)) body: { sessionId: string },
   ) {
-    return this.checkout.reconcileFromRedirect(orderNumber, body.transactionId);
+    return this.checkout.reconcileFromRedirect(orderNumber, body.sessionId);
   }
 }

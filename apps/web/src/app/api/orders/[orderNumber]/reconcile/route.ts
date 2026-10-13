@@ -6,8 +6,8 @@ const API_BASE_URL = process.env.API_BASE_URL ?? 'http://localhost:4000';
 /**
  * Fallback settlement for the confirmation page.
  *
- * Called once when the customer returns from Flutterwave carrying a
- * transaction id, to cover a webhook that has not arrived. The API does the
+ * Called once when the customer returns from Stripe carrying a Checkout
+ * Session id, to cover a webhook that has not arrived. The API does the
  * verifying; this only forwards.
  */
 export async function POST(
@@ -17,7 +17,7 @@ export async function POST(
   const { orderNumber } = await params;
   const body = await request.json().catch(() => null);
 
-  if (!body || typeof body.transactionId !== 'string') {
+  if (!body || typeof body.sessionId !== 'string') {
     return NextResponse.json({ message: 'Bad request' }, { status: 400 });
   }
 
@@ -27,7 +27,7 @@ export async function POST(
       {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ transactionId: body.transactionId }),
+        body: JSON.stringify({ sessionId: body.sessionId }),
         cache: 'no-store',
       },
     );
@@ -38,7 +38,7 @@ export async function POST(
 
     /*
      * Pass the API's own status and message through rather than flattening
-     * everything to 502. A rejected transaction id is a 400 with a reason, and
+     * everything to 502. A rejected session id is a 400 with a reason, and
      * reporting that as "Unavailable" sent a real debugging session looking at
      * the network instead of at the argument.
      */

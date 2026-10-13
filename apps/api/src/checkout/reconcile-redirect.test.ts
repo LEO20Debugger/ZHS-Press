@@ -5,7 +5,7 @@ import { CheckoutService } from './checkout.service';
  * Branch tests for reconcileFromRedirect.
  *
  * This path is reachable by anyone who knows an order number, and the
- * transaction id it acts on arrives in a URL. So the assertions that matter
+ * session id it acts on arrives in a URL. So the assertions that matter
  * here are the negative ones: which inputs must NOT result in a write to the
  * orders table.
  *
@@ -17,9 +17,9 @@ interface StubState {
   payment: Record<string, unknown> | undefined;
   order: Record<string, unknown> | undefined;
   writes: string[];
-  /** Transaction ids reconcile actually asked Flutterwave about. */
+  /** Session ids reconcile actually asked Stripe about. */
   verified: string[];
-  verifyResult: Record<string, unknown>;
+  verifyResult: Record<string, unknown> | null;
   verifyThrows?: Error;
 }
 
@@ -65,8 +65,8 @@ function makeService(state: StubState): CheckoutService {
     transaction: async (fn: (tx: unknown) => Promise<unknown>) => fn(db),
   };
 
-  const flutterwave = {
-    verifyTransaction: async (id: string) => {
+  const stripe = {
+    verifySession: async (id: string) => {
       state.verified.push(id);
       if (state.verifyThrows) throw state.verifyThrows;
       return state.verifyResult;
@@ -76,7 +76,7 @@ function makeService(state: StubState): CheckoutService {
   return new CheckoutService(
     db as never,
     { view: async () => ({ lines: [] }) } as never,
-    flutterwave as never,
+    stripe as never,
     { get: () => 'http://localhost:3000' } as never,
     { send: async () => ({ sent: true }) } as never,
   );
@@ -90,7 +90,7 @@ function baseState(overrides: Partial<StubState> = {}): StubState {
     verified: [],
     verifyResult: {
       txRef: 'ZHS-TEST01-abc',
-      providerTxId: '8832011',
+      providerTxId: 'cs_test_ours',
       amountCents: 2998,
       currency: 'USD',
       successful: true,
@@ -101,33 +101,33 @@ function baseState(overrides: Partial<StubState> = {}): StubState {
 }
 
 describe('reconcileFromRedirect', () => {
-  it('settles a pending order whose transaction verifies', async () => {
+  it('settles a pending order whose session verifies', async () => {
     const state = baseState();
-    const order = await makeService(state).reconcileFromRedirect('ZHS-TEST01', '8832011');
+    const order = await makeService(state).reconcileFromRedirect('ZHS-TEST01', 'cs_test_ours');
 
-    expect(state.verified).toEqual(['8832011']);
+    expect(state.verified).toEqual(['cs_test_ours']);
     expect(state.writes).toContain('update:orders');
     expect(order.orderNumber).toBe('ZHS-TEST01');
   });
 
-  it('does not call Flutterwave when the order is already settled', async () => {
+  it('does not call Stripe when the order is already settled', async () => {
     // Anyone holding an order number can hit this endpoint. Without the early
     // return, reloading the page would drive outbound requests at the provider.
     const state = baseState({ order: makeOrder('paid') });
-    await makeService(state).reconcileFromRedirect('ZHS-TEST01', '8832011');
+    await makeService(state).reconcileFromRedirect('ZHS-TEST01', 'cs_test_ours');
 
     expect(state.verified).toEqual([]);
     expect(state.writes).toEqual([]);
   });
 
-  it('ignores a transaction belonging to a different order', async () => {
+  it('ignores a session belonging to a different order', async () => {
     // Real, successful, and somebody else's. Settling on it would mark this
     // order paid against a stranger's money.
     const state = baseState({
       payment: { id: 99, orderId: ORDER_ID + 1, txRef: 'ZHS-OTHER-xyz', status: 'initiated' },
       verifyResult: {
         txRef: 'ZHS-OTHER-xyz',
-        providerTxId: '9999999',
+        providerTxId: 'cs_test_theirs',
         amountCents: 2998,
         currency: 'USD',
         successful: true,
@@ -135,14 +135,14 @@ describe('reconcileFromRedirect', () => {
       },
     });
 
-    await makeService(state).reconcileFromRedirect('ZHS-TEST01', '9999999');
+    await makeService(state).reconcileFromRedirect('ZHS-TEST01', 'cs_test_theirs');
 
     expect(state.writes).toEqual([]);
   });
 
-  it('ignores a transaction reference we never issued', async () => {
+  it('ignores a reference we never issued', async () => {
     const state = baseState({ payment: undefined });
-    await makeService(state).reconcileFromRedirect('ZHS-TEST01', '8832011');
+    await makeService(state).reconcileFromRedirect('ZHS-TEST01', 'cs_test_ours');
 
     expect(state.writes).toEqual([]);
   });
@@ -150,7 +150,16 @@ describe('reconcileFromRedirect', () => {
   it('leaves the order pending when the lookup fails', async () => {
     // A failed lookup is not a failed payment — the webhook may still land.
     const state = baseState({ verifyThrows: new Error('network down') });
-    const order = await makeService(state).reconcileFromRedirect('ZHS-TEST01', '8832011');
+    const order = await makeService(state).reconcileFromRedirect('ZHS-TEST01', 'cs_test_ours');
+
+    expect(state.writes).toEqual([]);
+    expect(order.status).toBe('pending');
+  });
+
+  it('changes nothing while the session is still undecided', async () => {
+    // Open, paid by a delayed method, or not this shop's session at all.
+    const state = baseState({ verifyResult: null });
+    const order = await makeService(state).reconcileFromRedirect('ZHS-TEST01', 'cs_test_ours');
 
     expect(state.writes).toEqual([]);
     expect(order.status).toBe('pending');
@@ -160,7 +169,7 @@ describe('reconcileFromRedirect', () => {
     const state = baseState({
       verifyResult: {
         txRef: 'ZHS-TEST01-abc',
-        providerTxId: '8832011',
+        providerTxId: 'cs_test_ours',
         amountCents: 2998,
         currency: 'USD',
         successful: false,
@@ -168,7 +177,7 @@ describe('reconcileFromRedirect', () => {
       },
     });
 
-    await makeService(state).reconcileFromRedirect('ZHS-TEST01', '8832011');
+    await makeService(state).reconcileFromRedirect('ZHS-TEST01', 'cs_test_ours');
 
     expect(state.writes).toContain('update:payments');
     expect(state.writes).not.toContain('update:orders');
@@ -178,7 +187,7 @@ describe('reconcileFromRedirect', () => {
     const state = baseState({
       verifyResult: {
         txRef: 'ZHS-TEST01-abc',
-        providerTxId: '8832011',
+        providerTxId: 'cs_test_ours',
         amountCents: 1,
         currency: 'USD',
         successful: true,
@@ -186,7 +195,7 @@ describe('reconcileFromRedirect', () => {
       },
     });
 
-    await makeService(state).reconcileFromRedirect('ZHS-TEST01', '8832011');
+    await makeService(state).reconcileFromRedirect('ZHS-TEST01', 'cs_test_ours');
 
     expect(state.writes).not.toContain('update:orders');
   });
@@ -195,7 +204,7 @@ describe('reconcileFromRedirect', () => {
     const state = baseState({ order: undefined });
 
     await expect(
-      makeService(state).reconcileFromRedirect('ZHS-NOPE', '8832011'),
+      makeService(state).reconcileFromRedirect('ZHS-NOPE', 'cs_test_ours'),
     ).rejects.toThrow(/not found/i);
   });
 });

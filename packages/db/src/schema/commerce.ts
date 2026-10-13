@@ -91,7 +91,7 @@ export const orders = mysqlTable(
     /**
      * The cart this order was placed from, so settlement can empty it.
      *
-     * Settlement happens in the Flutterwave webhook — server to server, with no
+     * Settlement happens in the Stripe webhook — server to server, with no
      * session cookie — so without this column the API has no way to know which
      * cart to clear, and a customer's basket still held what they had just
      * bought. Nullable and ON DELETE SET NULL: carts are purged once they
@@ -159,7 +159,7 @@ export const payments = mysqlTable(
       .references(() => orders.id, { onDelete: 'cascade' }),
     provider: varchar('provider', { length: 40 }).notNull().default('flutterwave'),
     /**
-     * Our own generated reference, sent to the provider as tx_ref.
+     * Our own generated reference, sent to Stripe as client_reference_id.
      *
      * This unique constraint is the idempotency key for the webhook. A
      * redelivered webhook must not produce a second paid order or a second

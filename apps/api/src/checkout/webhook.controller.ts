@@ -1,52 +1,43 @@
-import { Body, Controller, Headers, HttpCode, Logger, Post, UnauthorizedException } from '@nestjs/common';
-import { FlutterwaveService } from '../payments/flutterwave.service';
+import {
+  BadRequestException,
+  Controller,
+  Headers,
+  HttpCode,
+  Logger,
+  Post,
+  Req,
+  type RawBodyRequest,
+} from '@nestjs/common';
+import type { Request } from 'express';
+import type Stripe from 'stripe';
+import { PAYMENT_SOURCE, StripeService } from '../payments/stripe.service';
 import { CheckoutService } from './checkout.service';
 
-interface FlutterwaveWebhookBody {
-  event?: string;
-  id?: number | string;
-  transaction_id?: number | string;
-  data?: {
-    id?: number | string;
-    transaction_id?: number | string;
-    tx_ref?: string;
-    status?: string;
-  };
-}
+/** The Checkout events that can move an order. Everything else is ignored. */
+const SETTLING_EVENTS = new Set<string>([
+  'checkout.session.completed',
+  'checkout.session.async_payment_succeeded',
+  'checkout.session.async_payment_failed',
+  'checkout.session.expired',
+]);
 
 /**
- * Pulls the transaction id out of whichever payload shape arrived.
+ * Picks out the session id of an event this shop should act on.
  *
- * Flutterwave does not send one shape. The v3 webhook nests the transaction
- * under `data`; the older format puts `id` at the top level, and which one a
- * merchant receives depends on a dashboard toggle ("Enable v3 webhooks") that
- * can be changed without anyone touching this code. Reading only `data.id`
- * meant an account with that toggle off got a 200 and silent no-op on every
- * notification — a paid order that never settles, with nothing in the
- * provider's delivery log to suggest a problem.
- *
- * Accepting both shapes costs nothing: the id is only ever a pointer. Whatever
- * comes out of here is handed straight to Flutterwave to be verified, and it is
- * their answer — not this payload — that settles anything.
+ * The Stripe account is shared with another business, so the endpoint can
+ * receive that business's checkouts too. They are filtered out here, by the
+ * metadata every one of our sessions carries, before anything is fetched or
+ * written — otherwise each of their sales would log a warning about an unknown
+ * reference and cost a round trip to Stripe.
  */
-export function extractTransactionId(body: FlutterwaveWebhookBody): string | null {
-  const candidates = [
-    body.data?.id,
-    body.data?.transaction_id,
-    body.id,
-    body.transaction_id,
-  ];
+export function sessionIdToSettle(event: Pick<Stripe.Event, 'type' | 'data'>): string | null {
+  if (!SETTLING_EVENTS.has(event.type)) return null;
 
-  for (const candidate of candidates) {
-    if (candidate == null) continue;
-    const value = String(candidate).trim();
-    // Flutterwave transaction ids are numeric. Anything else is a different
-    // field that happens to be called "id" — an event id, say — and sending it
-    // to the verify endpoint would just produce a confusing failure.
-    if (/^\d+$/.test(value)) return value;
-  }
+  const session = event.data.object as Partial<Stripe.Checkout.Session>;
+  if (session.object !== 'checkout.session' || !session.id) return null;
+  if (session.metadata?.source !== PAYMENT_SOURCE) return null;
 
-  return null;
+  return session.id;
 }
 
 @Controller('webhooks')
@@ -54,58 +45,50 @@ export class WebhookController {
   private readonly logger = new Logger(WebhookController.name);
 
   constructor(
-    private readonly flutterwave: FlutterwaveService,
+    private readonly stripe: StripeService,
     private readonly checkout: CheckoutService,
   ) {}
 
   /**
-   * The only path that can mark an order paid.
+   * The primary path that marks an order paid.
    *
    * Sequence, and the order matters:
    *
-   *   1. Constant-time compare the verif-hash header. Reject unauthenticated
-   *      callers before doing any work or touching the database.
-   *   2. Take ONLY the transaction id from the body. Nothing else in the payload
-   *      is trusted — not the amount, not the status, not the reference.
-   *   3. Call Flutterwave back and ask what really happened to that id.
-   *   4. Hand the verified result to settlePayment, which asserts the amount and
-   *      currency match the order and claims the payment idempotently.
+   *   1. Verify the Stripe-Signature HMAC over the raw body. Reject anything
+   *      unsigned before doing any work or touching the database.
+   *   2. Drop events that are not ours (see sessionIdToSettle).
+   *   3. Re-read the session from Stripe, so the decision rests on its state now
+   *      rather than on an event that may have been overtaken.
+   *   4. Hand the result to settlePayment, which asserts the amount and currency
+   *      match the order and claims the order idempotently.
    *
-   * Always returns 200 once authenticated, including on mismatch. Flutterwave
-   * retries non-2xx responses, and retrying will not fix a payment that does not
-   * match its order — it would just redeliver forever. The mismatch is logged at
-   * error level for a human instead.
+   * Always returns 200 once authenticated, including on mismatch. Stripe
+   * retries non-2xx responses for days, and retrying will not fix a payment
+   * that does not match its order. The mismatch is logged at error level for a
+   * human instead.
    */
-  @Post('flutterwave')
+  @Post('stripe')
   @HttpCode(200)
-  async handleFlutterwave(
-    @Headers('verif-hash') signature: string | undefined,
-    @Body() body: FlutterwaveWebhookBody,
+  async handleStripe(
+    @Req() request: RawBodyRequest<Request>,
+    @Headers('stripe-signature') signature: string | undefined,
   ): Promise<{ received: true; handled: boolean }> {
-    if (!this.flutterwave.verifyWebhookSignature(signature)) {
-      this.logger.warn('Rejected webhook with missing or invalid verif-hash');
-      throw new UnauthorizedException();
+    const event = this.stripe.constructEvent(request.rawBody, signature);
+    if (!event) {
+      this.logger.warn('Rejected webhook with missing or invalid Stripe-Signature');
+      throw new BadRequestException('Invalid signature');
     }
 
-    const providerTxId = extractTransactionId(body);
-    if (providerTxId === null) {
-      /*
-       * Log the shape, not the payload: it can carry a customer's name, email
-       * and card metadata, none of which belongs in a log line. The key names
-       * alone are enough to tell which format arrived, which is the one thing
-       * this message previously left you guessing about.
-       */
-      this.logger.warn(
-        'Authenticated webhook carried no transaction id. Top-level keys: ' +
-          `[${Object.keys(body ?? {}).join(', ')}]` +
-          (body?.data ? `, data keys: [${Object.keys(body.data).join(', ')}]` : ''),
-      );
+    const sessionId = sessionIdToSettle(event);
+    if (sessionId === null) return { received: true, handled: false };
+
+    const verified = await this.stripe.verifySession(sessionId);
+    if (verified === null) {
+      // Open, or paid by a method that settles later. A later event decides it.
       return { received: true, handled: false };
     }
 
-    const verified = await this.flutterwave.verifyTransaction(providerTxId);
     const result = await this.checkout.settlePayment(verified);
-
     return { received: true, handled: result.handled };
   }
 }

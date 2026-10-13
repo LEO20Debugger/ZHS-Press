@@ -72,7 +72,7 @@ export interface SendResult {
  * Email is a side effect of the thing the user actually asked for, and a
  * relay timing out must not turn a completed order into a 500 — the customer
  * has already paid, the stock is already decremented, and failing the webhook
- * would make Flutterwave redeliver it. Callers log and carry on. The cost of
+ * would make Stripe redeliver it. Callers log and carry on. The cost of
  * this choice is that a broken relay is invisible unless someone reads the
  * logs, which is why every failure is logged at `error` with the template name
  * and recipient.

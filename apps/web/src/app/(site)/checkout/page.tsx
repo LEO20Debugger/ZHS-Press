@@ -109,7 +109,7 @@ export default function CheckoutPage() {
         return;
       }
 
-      // Hand off to Flutterwave's hosted page. We never see a card number.
+      // Hand off to Stripe's hosted page. We never see a card number.
       window.location.href = result.paymentLink as string;
     } catch {
       setMessage('Could not reach the shop. Please try again.');
@@ -220,7 +220,7 @@ export default function CheckoutPage() {
           </Button>
 
           <p className="text-caption text-ink-muted">
-            Payment is handled by Flutterwave on their own secure page. ZHS Press never sees your
+            Payment is handled by Stripe on their own secure page. ZHS Press never sees your
             card details.
           </p>
         </form>

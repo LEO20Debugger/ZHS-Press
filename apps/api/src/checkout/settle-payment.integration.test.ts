@@ -68,7 +68,7 @@ describe.skipIf(!DATABASE_URL)('webhook idempotency (needs MySQL)', () => {
 
     await db.insert(schema.payments).values({
       orderId,
-      provider: 'flutterwave',
+      provider: 'stripe',
       txRef,
       amountCents: 2998,
       currency: 'USD',
@@ -120,7 +120,7 @@ describe.skipIf(!DATABASE_URL)('webhook idempotency (needs MySQL)', () => {
     await expect(
       db.insert(schema.payments).values({
         orderId,
-        provider: 'flutterwave',
+        provider: 'stripe',
         txRef,
         amountCents: 2998,
         currency: 'USD',

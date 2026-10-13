@@ -143,7 +143,7 @@ describe('ResendTransport.send', () => {
     );
 
     // The payment webhook calls this. A throw here would fail the webhook for
-    // an order that already settled, and Flutterwave would redeliver it.
+    // an order that already settled, and Stripe would redeliver it.
     const result = await new ResendTransport('re_key').send('a@b.com', MAIL, 'c@d.com');
     expect(result.ok).toBe(false);
     expect(result.error).toContain('ENOTFOUND');

@@ -15,10 +15,8 @@ async function bootstrap(): Promise<void> {
   installProcessDiagnostics();
 
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
-    // Kept for any future provider that signs an HMAC over the exact bytes.
-    // Flutterwave does not: its verif-hash is a static shared secret echoed
-    // back verbatim, so it needs no raw body — which is precisely why every
-    // webhook is independently re-verified against the provider.
+    // Required by the Stripe webhook: its signature is an HMAC over the exact
+    // bytes received, and a body re-serialised from parsed JSON never matches.
     rawBody: true,
   });
 

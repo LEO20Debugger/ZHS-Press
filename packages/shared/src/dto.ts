@@ -177,6 +177,6 @@ export interface OrderView {
 
 export interface CheckoutSession {
   orderNumber: string;
-  /** Flutterwave-hosted payment page. The browser is sent here. */
+  /** Stripe-hosted Checkout page. The browser is sent here. */
   paymentLink: string;
 }

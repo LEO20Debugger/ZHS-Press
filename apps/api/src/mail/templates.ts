@@ -359,7 +359,7 @@ function addressLines(address: NonNullable<ReceiptOrder['shippingAddress']>): st
  * The order receipt.
  *
  * Sent once, when the webhook settles the payment — never on the redirect back
- * from Flutterwave, which proves nothing about whether money moved.
+ * from Stripe, which proves nothing about whether money moved.
  *
  * Amounts come from the order row, which snapshotted them at checkout. Nothing
  * here recalculates a total: a receipt that disagreed with the charge, because
