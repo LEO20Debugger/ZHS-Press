@@ -5,6 +5,7 @@ import { AudienceService } from './audience.service';
 import { AuditService } from './audit.service';
 import { ContributorsService } from './contributors.service';
 import { ParityService } from './parity.service';
+import { ShippingService } from './shipping.service';
 import { WaitlistNotifier } from './waitlist-notifier.service';
 
 @Module({
@@ -16,6 +17,7 @@ import { WaitlistNotifier } from './waitlist-notifier.service';
     WaitlistNotifier,
     ContributorsService,
     AudienceService,
+    ShippingService,
   ],
 })
 export class AdminModule {}

@@ -13,6 +13,7 @@ import {
   IconOrders,
   IconOverview,
   IconParity,
+  IconSettings,
   IconSignOut,
   IconSubmissions,
 } from './icons';
@@ -37,6 +38,7 @@ const NAV = [
   { href: '/admin/parity', label: 'Amazon parity', adminOnly: false, Icon: IconParity },
   { href: '/admin/audience', label: 'Audience', adminOnly: true, Icon: IconAudience },
   { href: '/admin/orders', label: 'Orders', adminOnly: true, Icon: IconOrders },
+  { href: '/admin/settings', label: 'Settings', adminOnly: true, Icon: IconSettings },
 ] as const;
 
 export function AdminShell({ children }: { children: ReactNode }) {

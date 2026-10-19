@@ -400,7 +400,7 @@ export function ProductImages({
   }
 
   return (
-    <div className="border-t border-rule pt-6">
+    <div>
       <p className="eyebrow">Images</p>
       <p className="mt-1 text-caption text-ink-muted">
         The first image is the cover. Sampling sets the accent colour from the artwork.

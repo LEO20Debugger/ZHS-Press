@@ -25,11 +25,13 @@ import {
   addProductImageSchema,
   adjustInventorySchema,
   attachContributorSchema,
+  shippingZoneSchema,
   upsertProductSchema,
   type AddProductImageInput,
   type AdjustInventoryInput,
   type AttachContributorInput,
   type ContributorRole,
+  type ShippingZoneInput,
   type UpsertProductInput,
 } from '@zhs/shared';
 import { ConfigService } from '@nestjs/config';
@@ -44,6 +46,7 @@ import { AudienceService } from './audience.service';
 import { AuditService } from './audit.service';
 import { ContributorsService } from './contributors.service';
 import { ParityService } from './parity.service';
+import { ShippingService } from './shipping.service';
 import { StorageService } from '../storage/storage.service';
 import { rowsAffected } from '../db/rows-affected';
 
@@ -68,6 +71,7 @@ export class AdminController {
     private readonly audience: AudienceService,
     private readonly mail: MailService,
     private readonly config: ConfigService<Env, true>,
+    private readonly shipping: ShippingService,
   ) {}
 
   /* ---- Catalogue: editors and admins ---------------------------------- */
@@ -452,6 +456,42 @@ export class AdminController {
   @Roles('admin')
   auditLog() {
     return this.audit.recent();
+  }
+
+  /* ---- Settings: admins only — these set what customers pay ------------ */
+
+  @Get('shipping')
+  @Roles('admin')
+  listShipping() {
+    return this.shipping.list();
+  }
+
+  @Post('shipping')
+  @Roles('admin')
+  createShipping(
+    @Body(new ZodValidationPipe(shippingZoneSchema)) body: ShippingZoneInput,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return this.shipping.create(body, request.admin!);
+  }
+
+  @Put('shipping/:id')
+  @Roles('admin')
+  updateShipping(
+    @Param('id', ParseIntPipe) id: number,
+    @Body(new ZodValidationPipe(shippingZoneSchema)) body: ShippingZoneInput,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return this.shipping.update(id, body, request.admin!);
+  }
+
+  @Delete('shipping/:id')
+  @Roles('admin')
+  removeShipping(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return this.shipping.remove(id, request.admin!);
   }
 
   /* ---- Dashboard ------------------------------------------------------- */

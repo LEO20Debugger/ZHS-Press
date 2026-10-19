@@ -95,6 +95,18 @@ export function IconOrders(props: IconProps) {
   );
 }
 
+/** Settings: three sliders, set to different levels. */
+export function IconSettings(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M4 6h16M4 12h16M4 18h16" />
+      <rect x="7" y="4" width="3" height="4" />
+      <rect x="14" y="10" width="3" height="4" />
+      <rect x="9" y="16" width="3" height="4" />
+    </Svg>
+  );
+}
+
 /** The menu button, closed. */
 export function IconMenu(props: IconProps) {
   return (

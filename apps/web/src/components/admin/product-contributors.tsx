@@ -166,7 +166,7 @@ export function ProductContributors({ productId }: { productId: number }) {
   }
 
   return (
-    <fieldset className="border-t border-rule pt-6">
+    <fieldset>
       <legend className="eyebrow">Contributors</legend>
       <p className="mt-1 text-caption text-ink-muted">
         The writers and artists credited on this title. Search first — the same person recurs

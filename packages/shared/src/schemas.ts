@@ -328,3 +328,30 @@ export const adjustInventorySchema = z
     'Send either a quantity or a delta, not both.',
   );
 export type AdjustInventoryInput = z.infer<typeof adjustInventorySchema>;
+
+/**
+ * A shipping zone, as edited on the admin Settings page.
+ *
+ * Money in integer cents like everywhere else; the form converts at its edge.
+ * Country codes are normalised to upper-case ISO alpha-2 here, so " ng" typed
+ * into the form and "NG" sent by checkout are the same code.
+ *
+ * The catch-all zone is identified by having no countries. Whether a given
+ * zone may have none — exactly one may, and it is the default — is a rule
+ * across rows, so it is the service that enforces it, not this schema.
+ */
+export const shippingZoneSchema = z.object({
+  zoneName: z.string().trim().min(1, 'Give the zone a name').max(120),
+  countryCodes: z
+    .array(
+      z
+        .string()
+        .trim()
+        .toUpperCase()
+        .regex(/^[A-Z]{2}$/, 'Use two-letter country codes, like NG or GB'),
+    )
+    .max(250),
+  rateCents: z.number().int().min(0).max(1_000_000),
+  freeOverCents: z.number().int().min(0).max(100_000_000).nullable(),
+});
+export type ShippingZoneInput = z.infer<typeof shippingZoneSchema>;
