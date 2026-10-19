@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { ProductDetailView } from '@/components/product-detail';
+import { RelatedProducts } from '@/components/related-products';
 import { getProduct, listAllSlugs } from '@/lib/catalog';
 
 type Params = { params: Promise<{ slug: string }> };
@@ -34,6 +35,7 @@ export default async function BookPage({ params }: Params) {
   return (
     <>
       <ProductDetailView product={product} />
+      <RelatedProducts product={product} />
       {/*
         Structured data so the title is eligible for rich results. Price and
         availability mirror the same fields the shop uses, so they cannot drift.

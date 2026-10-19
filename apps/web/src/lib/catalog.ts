@@ -215,3 +215,38 @@ export async function listAllSlugs(): Promise<Array<{ slug: string; type: Produc
     return [];
   }
 }
+
+/**
+ * Titles to suggest at the foot of a product page.
+ *
+ * Ranked rather than filtered, so a small catalogue still fills the row: the
+ * same kind of thing first, the same author or illustrator above that, and
+ * something that can be bought now above something that cannot. Ties keep the
+ * catalogue's own order.
+ *
+ * Never throws. Suggestions are a nicety; a product page that fails because the
+ * row beneath it could not load would be the wrong trade.
+ */
+export async function getRelatedProducts(
+  product: Pick<ProductSummary, 'id' | 'type' | 'attribution'>,
+  limit = 4,
+): Promise<ProductSummary[]> {
+  let candidates: ProductSummary[];
+  try {
+    candidates = (await listProducts({ perPage: 60 })).items;
+  } catch {
+    return [];
+  }
+
+  const score = (item: ProductSummary) =>
+    (item.type === product.type ? 4 : 0) +
+    (product.attribution && item.attribution === product.attribution ? 3 : 0) +
+    (item.status === 'available' ? 2 : item.status === 'coming_soon' ? 1 : 0);
+
+  return candidates
+    .filter((item) => item.id !== product.id && isPublic(item))
+    .map((item, index) => ({ item, index, score: score(item) }))
+    .sort((a, b) => b.score - a.score || a.index - b.index)
+    .slice(0, limit)
+    .map(({ item }) => item);
+}

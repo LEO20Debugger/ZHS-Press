@@ -353,6 +353,32 @@
   .group:hover .cover-frame img {
     transform: scale(1.04) translateY(-4px);
   }
+
+  /*
+   * Tilting covers (TiltCover). The whole cover leans toward the cursor and
+   * rises, so the artwork moves as one object — the zoom-within-the-frame
+   * above is switched off for these, since doing both reads as two effects
+   * fighting.
+   *
+   * The settle back is slower than the follow: quick enough to track the
+   * cursor without lag, unhurried enough on release to feel like a book being
+   * put down rather than snapping flat.
+   */
+  .tilt {
+    transform: perspective(1000px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg))
+      translateY(var(--tilt-lift, 0px));
+    transition: transform 700ms var(--ease-out);
+  }
+
+  .tilt[data-tilting='true'] {
+    --tilt-lift: -6px;
+    transition-duration: 160ms;
+  }
+
+  .group:hover .tilt img,
+  .tilt.group:hover img {
+    transform: none;
+  }
 }
 
 /*
@@ -387,6 +413,12 @@
 
   .group:hover .cover-frame img {
     transform: none !important;
+  }
+
+  .tilt,
+  .tilt[data-tilting='true'] {
+    transform: none !important;
+    transition: none !important;
   }
 }
 

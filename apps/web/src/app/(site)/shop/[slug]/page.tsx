@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { ProductDetailView } from '@/components/product-detail';
+import { RelatedProducts } from '@/components/related-products';
 import { getProduct, listAllSlugs } from '@/lib/catalog';
 
 type Params = { params: Promise<{ slug: string }> };
@@ -25,5 +26,10 @@ export default async function ShopProductPage({ params }: Params) {
   const product = await getProduct(slug);
   if (!product) notFound();
 
-  return <ProductDetailView product={product} />;
+  return (
+    <>
+      <ProductDetailView product={product} />
+      <RelatedProducts product={product} />
+    </>
+  );
 }

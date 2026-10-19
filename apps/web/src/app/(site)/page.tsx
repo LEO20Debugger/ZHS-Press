@@ -12,6 +12,7 @@ import {
   Sticker,
 } from '@/components/primitives';
 import { Reveal } from '@/components/reveal';
+import { TiltCover } from '@/components/tilt-cover';
 import { listProducts } from '@/lib/catalog';
 
 export default async function HomePage() {
@@ -80,7 +81,7 @@ export default async function HomePage() {
                 the width bounds the height without distorting the cover or
                 cropping the title off it.
               */}
-              <div className="cover-frame relative aspect-[4/5] bg-accent-tint">
+              <TiltCover className="cover-frame relative aspect-[4/5] bg-accent-tint">
                 {hero.coverImage ? (
                   // The hero is the largest contentful paint; never lazy.
                   <Image
@@ -99,7 +100,7 @@ export default async function HomePage() {
                     <Sticker>New</Sticker>
                   )}
                 </div>
-              </div>
+              </TiltCover>
               <div className="mt-4 flex items-baseline justify-between gap-4">
                 <div>
                   <h2 className="font-display text-h2">{hero.title}</h2>

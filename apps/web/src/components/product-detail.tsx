@@ -4,6 +4,7 @@ import type { ProductDetail } from '@zhs/shared';
 import { AddToCart } from './add-to-cart';
 import { accentStyle, Button, Eyebrow, HandDrawnRule, Sticker } from './primitives';
 import { Reveal } from './reveal';
+import { TiltCover } from './tilt-cover';
 import { WaitlistForm } from './waitlist-form';
 
 function DetailRow({ label, value }: { label: string; value: string | number | null }) {
@@ -113,27 +114,33 @@ export function ProductDetailView({ product }: { product: ProductDetail }) {
 
             Matched to the homepage hero's cap so a cover is a consistent size
             wherever it is shown large.
+
+            Two elements, not one: the entrance animation and the tilt both set
+            `transform`, and a finished animation keeps holding its last frame
+            over anything set afterwards. The outer one rises; the inner tilts.
           */}
-          <div className="cover-frame rise group relative mx-auto w-full max-w-[400px] bg-paper-raised">
-            {cover ? (
-              // The largest contentful paint on this page: priority, never lazy.
-              <Image
-                src={cover.url}
-                alt={cover.alt}
-                width={cover.width ?? 896}
-                height={cover.height ?? 1200}
-                sizes="(min-width: 768px) 400px, 100vw"
-                priority
-                className="h-full w-full object-cover"
-              />
-            ) : null}
-            {product.status !== 'available' ? (
-              <div className="sticker-settle absolute left-4 top-4">
-                <Sticker tone={product.status === 'sold_out' ? 'quiet' : 'ink'}>
-                  {product.status === 'sold_out' ? 'Sold out' : 'Coming soon'}
-                </Sticker>
-              </div>
-            ) : null}
+          <div className="rise mx-auto w-full max-w-[400px]">
+            <TiltCover className="cover-frame group relative bg-paper-raised">
+              {cover ? (
+                // The largest contentful paint on this page: priority, never lazy.
+                <Image
+                  src={cover.url}
+                  alt={cover.alt}
+                  width={cover.width ?? 896}
+                  height={cover.height ?? 1200}
+                  sizes="(min-width: 768px) 400px, 100vw"
+                  priority
+                  className="h-full w-full object-cover"
+                />
+              ) : null}
+              {product.status !== 'available' ? (
+                <div className="sticker-settle absolute left-4 top-4">
+                  <Sticker tone={product.status === 'sold_out' ? 'quiet' : 'ink'}>
+                    {product.status === 'sold_out' ? 'Sold out' : 'Coming soon'}
+                  </Sticker>
+                </div>
+              ) : null}
+            </TiltCover>
           </div>
 
           <div
