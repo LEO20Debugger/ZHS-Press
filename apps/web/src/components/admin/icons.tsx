@@ -107,6 +107,16 @@ export function IconSettings(props: IconProps) {
   );
 }
 
+/** Collapse or expand the sidebar: a panel with its rail marked. */
+export function IconSidebar(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <rect x="3" y="4" width="18" height="16" />
+      <path d="M9 4v16" />
+    </Svg>
+  );
+}
+
 /** The menu button, closed. */
 export function IconMenu(props: IconProps) {
   return (

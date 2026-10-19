@@ -18,6 +18,37 @@ export const slugSchema = z
 
 export const emailSchema = z.string().trim().toLowerCase().email().max(320);
 
+/**
+ * Amazon's storefronts, and the short-link domains Amazon itself issues.
+ *
+ * Anchored on the registrable part of the host, so "amazon.com.evil.io" and
+ * "notamazon.com" both fail: the subdomain group only ever adds labels in
+ * front of an Amazon domain, never after it.
+ */
+const AMAZON_HOST =
+  /^(?:[a-z0-9-]+\.)*amazon\.(?:com|ca|com\.mx|com\.br|co\.uk|ie|de|fr|it|es|nl|se|pl|com\.be|com\.tr|ae|sa|eg|in|co\.jp|sg|com\.au|co\.za|com\.ng)$|^(?:amzn\.to|amzn\.eu|amzn\.asia|a\.co)$/;
+
+/**
+ * The one outside link a product may carry: its Amazon listing.
+ *
+ * Restricted, not merely URL-shaped, because the storefront renders it as a
+ * "Buy on Amazon" button — a free-form field there would let any address be
+ * presented to customers under Amazon's name. https only, for the same reason.
+ */
+export const amazonUrlSchema = z
+  .string()
+  .trim()
+  .url('Paste the full Amazon link, starting with https://')
+  .max(512)
+  .refine((value) => {
+    try {
+      const url = new URL(value);
+      return url.protocol === 'https:' && AMAZON_HOST.test(url.hostname.toLowerCase());
+    } catch {
+      return false;
+    }
+  }, 'Only Amazon links are allowed here, e.g. https://www.amazon.com/dp/…');
+
 export const hexColorSchema = z
   .string()
   .regex(/^#[0-9a-fA-F]{6}$/, 'Must be a six-digit hex colour, e.g. #b13f2f');
@@ -210,7 +241,7 @@ export const upsertProductSchema = z
     priceCents: centsSchema,
     compareAtCents: centsSchema.optional(),
     releaseDate: z.string().date().optional(),
-    amazonUrl: z.string().url().max(512).optional(),
+    amazonUrl: amazonUrlSchema.optional(),
     accentHex: hexColorSchema.optional(),
     featured: z.boolean().default(false),
     sortOrder: z.number().int().default(0),
@@ -297,9 +328,15 @@ export const addProductImageSchema = z.object({
     .trim()
     .min(1)
     .max(512)
+    /*
+     * Site-relative only. Images reach a product by upload, which stores them
+     * on this site; an outside address would put artwork the press does not
+     * host on its own pages. "//" is refused too — it is a protocol-relative
+     * link to another host, not a path.
+     */
     .refine(
-      (value) => value.startsWith('/') || /^https?:\/\//.test(value),
-      'Must be a site-relative path like /covers/soar.jpg, or an http(s) URL',
+      (value) => value.startsWith('/') && !value.startsWith('//'),
+      'Must be a path on this site, like /covers/soar.jpg. Upload the image instead.',
     ),
   alt: z.string().trim().min(1, 'Describe the image for screen readers').max(320),
   position: z.number().int().min(0).optional(),

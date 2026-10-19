@@ -150,7 +150,6 @@ export function ProductImages({
   onAccentSampled: (hex: string) => void;
   onChanged: (images: ProductImage[]) => void;
 }) {
-  const [url, setUrl] = useState('');
   const [alt, setAlt] = useState('');
   const [busy, setBusy] = useState(false);
   /*
@@ -334,34 +333,6 @@ export function ProductImages({
     }
   }
 
-  async function addImage() {
-    setBusy(true);
-    setMessage(null);
-
-    try {
-      const response = await fetch(`/api/admin/admin/products/${productId}/images`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ url: url.trim(), alt: alt.trim() }),
-      });
-
-      const payload = await response.json().catch(() => null);
-      if (!response.ok) {
-        fail(payload?.errors?.[0]?.message ?? payload?.message ?? 'Could not add that.');
-        return;
-      }
-
-      onChanged(payload.images ?? []);
-      setUrl('');
-      setAlt('');
-      say('Image added.');
-    } catch {
-      fail('Could not reach the server.');
-    } finally {
-      setBusy(false);
-    }
-  }
-
   async function remove(imageId: number) {
     const response = await fetch(`/api/admin/admin/products/${productId}/images/${imageId}`, {
       method: 'DELETE',
@@ -413,9 +384,12 @@ export function ProductImages({
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={image.url} alt={image.alt} className="h-16 w-12 shrink-0 object-cover" />
               <div className="min-w-0 flex-1">
-                <p className="truncate font-ui text-small">{image.url}</p>
+                {/* Named by position, not by file address — the address is
+                    plumbing, and the position is what decides where it shows. */}
+                <p className={`font-ui text-small ${index === 0 ? 'text-moss' : ''}`}>
+                  {index === 0 ? 'Cover' : `Image ${index + 1}`}
+                </p>
                 <p className="truncate text-caption text-ink-muted">{image.alt}</p>
-                {index === 0 ? <p className="text-caption text-moss">Cover</p> : null}
               </div>
               <div className="flex shrink-0 gap-3 text-caption">
                 <button
@@ -551,48 +525,8 @@ export function ProductImages({
         ) : null}
       </div>
 
-      {/* Kept for artwork already sitting in the web app's public directory. */}
-      <details className="mt-4">
-        <summary className="cursor-pointer text-caption text-ink-muted">
-          Or reference an image by path
-        </summary>
-        {/*
-          A group, not a <form>. This panel renders inside the product page's
-          own <form>, and a form inside a form is invalid HTML: the browser
-          handed the Add button to the outer form, so pressing it did a native
-          page submit — the page reloaded, the typed path vanished, and no
-          image request was ever sent. Enter is handled by hand to keep the
-          keyboard behaviour a form would have given.
-        */}
-        <div role="group" aria-label="Add an image by path" className="mt-3 flex gap-3">
-          <label htmlFor="image-url" className="sr-only">
-            Image path or URL
-          </label>
-          <input
-            id="image-url"
-            value={url}
-            onChange={(event) => setUrl(event.target.value)}
-            onKeyDown={(event) => {
-              // Also stops Enter here from submitting the product form around it.
-              if (event.key === 'Enter') {
-                event.preventDefault();
-                if (!busy) void addImage();
-              }
-            }}
-            placeholder="/covers/soar.jpg"
-            className={FIELD}
-          />
-          {/* Same trap as the Upload button: missing alt text is reported, not
-              silently enforced by a dead control. Only an in-flight request
-              disables this. */}
-          <Button disabled={busy} variant="outline" onClick={() => void addImage()}>
-            Add
-          </Button>
-        </div>
-      </details>
-
       {/*
-        One status line for both routes.
+        One status line for the panel.
 
         role="alert" for a refusal, role="status" for everything else: alert
         interrupts a screen reader with what is blocking the upload, while

@@ -85,6 +85,22 @@ function slugify(title: string): string {
     .replace(/-+$/, '');
 }
 
+/**
+ * The web address is generated from the title and never shown for editing, so
+ * a problem with it is reported against the title — the field that actually
+ * controls it — in words that say what to change.
+ */
+function slugErrorOnTitle(errors: Record<string, string>): Record<string, string> {
+  if (!errors.slug || errors.title) return errors;
+  const { slug: _slug, ...rest } = errors;
+  return {
+    ...rest,
+    title: /taken|already/i.test(errors.slug)
+      ? 'Another product already has this title. Add something to tell them apart, such as a volume or edition.'
+      : 'The title needs at least one letter or number.',
+  };
+}
+
 /** Where the product lives on the storefront — mirrors productHref. */
 function sitePath(type: string): string {
   if (type === 'book') return '/books/';
@@ -215,13 +231,6 @@ export default function ProductEditPage({ params }: { params: Promise<{ id: stri
   const [message, setMessage] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  /*
-   * Whether the slug has been typed by hand. Until it has, a new product's
-   * slug follows its title, so the common case needs no thought about URLs at
-   * all. An existing product never auto-follows: its URL is already out there.
-   */
-  const [slugEdited, setSlugEdited] = useState(!isNew);
-  const [editingSlug, setEditingSlug] = useState(false);
 
   /*
    * Confirmation of a save, held open until it is acknowledged. Closing it by
@@ -341,7 +350,13 @@ export default function ProductEditPage({ params }: { params: Promise<{ id: stri
   }
 
   function setTitle(value: string) {
-    setForm((prev) => ({ ...prev, title: value, slug: slugEdited ? prev.slug : slugify(value) }));
+    /*
+     * The web address is never edited by hand. A new product's follows its
+     * title; an existing product's stays as it is, because its address is
+     * already out there in shared links and search results, and renaming a
+     * title should not break them.
+     */
+    setForm((prev) => ({ ...prev, title: value, slug: isNew ? slugify(value) : prev.slug }));
   }
 
   const dirty = JSON.stringify(form) !== JSON.stringify(baseline);
@@ -436,9 +451,7 @@ export default function ProductEditPage({ params }: { params: Promise<{ id: stri
         const key = issue.path.join('.') || 'form';
         if (!fieldErrors[key]) fieldErrors[key] = issue.message;
       }
-      setErrors(fieldErrors);
-      // The slug lives behind a toggle; open it if that is where the problem is.
-      if (fieldErrors.slug) setEditingSlug(true);
+      setErrors(slugErrorOnTitle(fieldErrors));
       const errorCount = Object.keys(fieldErrors).length;
       setMessage(errorCount === 1 ? 'Check the highlighted field.' : `Check the ${errorCount} highlighted fields.`);
       return;
@@ -464,8 +477,11 @@ export default function ProductEditPage({ params }: { params: Promise<{ id: stri
       if (Array.isArray(result?.errors)) {
         const fieldErrors: Record<string, string> = {};
         for (const issue of result.errors) fieldErrors[issue.field] = issue.message;
-        setErrors(fieldErrors);
-        if (fieldErrors.slug) setEditingSlug(true);
+        setErrors(slugErrorOnTitle(fieldErrors));
+        if (fieldErrors.slug) {
+          setMessage('Another product already has this title.');
+          return;
+        }
       }
       setMessage(result?.message ?? 'Could not save.');
       return;
@@ -589,58 +605,6 @@ export default function ProductEditPage({ params }: { params: Promise<{ id: stri
                   className={FIELD}
                 />
               </Field>
-
-              {/*
-                The URL, shown as the address it becomes rather than as a bare
-                "slug" field. Most people never need to touch it, so it sits
-                behind a small Edit link; an error opens it automatically.
-              */}
-              <div>
-                <p className="eyebrow">Web address</p>
-                {editingSlug ? (
-                  <div className="mt-2">
-                    <div className="flex items-stretch">
-                      <span className="flex items-center border border-r-0 border-rule bg-paper-deep px-3 font-ui text-caption text-ink-muted">
-                        {sitePath(form.type)}
-                      </span>
-                      <input
-                        id="slug"
-                        aria-label="Web address"
-                        value={form.slug}
-                        onChange={(e) => {
-                          setSlugEdited(true);
-                          set('slug', e.target.value);
-                        }}
-                        className={FIELD}
-                      />
-                    </div>
-                    {errors.slug ? (
-                      <p role="alert" className="mt-1.5 text-caption text-danger">
-                        {errors.slug}
-                      </p>
-                    ) : (
-                      <p className="mt-1.5 text-caption text-ink-muted">
-                        Lowercase words joined by hyphens.
-                        {!isNew ? ' Changing it breaks links people have already shared.' : ''}
-                      </p>
-                    )}
-                  </div>
-                ) : (
-                  <p className="mt-2 flex flex-wrap items-baseline gap-x-3 font-ui text-small">
-                    <span className="break-all text-ink-muted">
-                      zhspress.org{sitePath(form.type)}
-                      <span className="text-ink">{form.slug || 'your-title-here'}</span>
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setEditingSlug(true)}
-                      className="link-underline text-caption text-ink-muted hover:text-ink"
-                    >
-                      Edit
-                    </button>
-                  </p>
-                )}
-              </div>
             </Panel>
 
             {/*
@@ -917,7 +881,13 @@ export default function ProductEditPage({ params }: { params: Promise<{ id: stri
             </Panel>
 
             <Panel title="Also sold on">
-              <Field label="Amazon link" id="amazonUrl" optional error={errors.amazonUrl}>
+              <Field
+                label="Amazon link"
+                id="amazonUrl"
+                optional
+                hint="This title's page on any Amazon store."
+                error={errors.amazonUrl}
+              >
                 <input id="amazonUrl" value={form.amazonUrl} placeholder="https://www.amazon.com/…"
                   onChange={(e) => set('amazonUrl', e.target.value)} className={FIELD} />
               </Field>
