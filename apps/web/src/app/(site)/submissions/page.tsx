@@ -64,8 +64,8 @@ export default function SubmissionsPage() {
           </div>
           <p className="mt-8 text-small text-ink-muted">
             Prefer email? Write to{' '}
-            <a href="mailto:submissions@zhspress.org" className="link-underline">
-              submissions@zhspress.org
+            <a href="mailto:info@zhspress.org" className="link-underline">
+              info@zhspress.org
             </a>
             .
           </p>

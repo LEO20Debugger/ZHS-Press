@@ -152,6 +152,9 @@ const config = {
   SMTP_URL: process.env.SMTP_URL,
   MAIL_FROM: process.env.MAIL_FROM ?? 'ZHS Press <onboarding@resend.dev>',
   MAIL_REPLY_TO: process.env.MAIL_REPLY_TO,
+  // MailService reads this to decide whether the logo can be linked from the
+  // public site. Missing, it crashed before sending anything.
+  WEB_BASE_URL: process.env.WEB_BASE_URL ?? 'http://localhost:3000',
   NODE_ENV: 'development',
 };
 

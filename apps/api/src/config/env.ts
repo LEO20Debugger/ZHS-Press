@@ -112,7 +112,7 @@ const envSchema = z.object({
    *
    * `Name <address>` form is allowed; a bare address is fine too.
    */
-  MAIL_FROM: z.string().default('ZHS Press <hello@zhspress.org>'),
+  MAIL_FROM: z.string().default('ZHS Press <noreply@zhspress.org>'),
 
   /**
    * Where replies go, when From is a no-reply sender. A customer replying to

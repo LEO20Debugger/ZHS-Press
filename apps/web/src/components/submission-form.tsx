@@ -149,7 +149,7 @@ export function SubmissionForm() {
       {state === 'error' ? (
         <p role="alert" className="text-caption text-danger">
           Something went wrong sending that. Please try again, or email
-          submissions@zhspress.org.
+          info@zhspress.org.
         </p>
       ) : null}
 

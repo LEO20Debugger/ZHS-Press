@@ -86,7 +86,7 @@ export function NewsletterTokenAction({
 
       {state === 'error' ? (
         <p role="alert" className="mt-4 text-caption text-danger">
-          Something went wrong at our end. Please try again, or email hello@zhspress.org.
+          Something went wrong at our end. please try again, or email info@zhspress.org.
         </p>
       ) : null}
     </div>
