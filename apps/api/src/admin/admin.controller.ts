@@ -83,7 +83,15 @@ export class AdminController {
     @Query('status') status?: string,
     @Query('page') page?: string,
   ) {
-    return this.products.list({ search, type, status, page: page ? Number(page) : 1 });
+    // Anything that is not a positive whole number is page 1. Number('abc') is
+    // NaN, and a NaN offset reaches the database as an invalid query.
+    const pageNumber = Number(page);
+    return this.products.list({
+      search,
+      type,
+      status,
+      page: Number.isInteger(pageNumber) && pageNumber > 0 ? pageNumber : 1,
+    });
   }
 
   /** The palette the colour picker offers, with each option's text pairing. */

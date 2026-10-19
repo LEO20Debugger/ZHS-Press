@@ -74,6 +74,8 @@ export function AdminShell({ children }: { children: ReactNode }) {
   const [checked, setChecked] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  // Set by the first press of the toggle; see the sidebar's transition below.
+  const [animate, setAnimate] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
 
@@ -93,6 +95,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
   }, []);
 
   function toggleCollapsed() {
+    setAnimate(true);
     setCollapsed((previous) => {
       const next = !previous;
       try {
@@ -185,11 +188,14 @@ export function AdminShell({ children }: { children: ReactNode }) {
   /*
    * One nav link, for both the sidebar and the phone menu.
    *
-   * Collapsed, the label is kept in the DOM as screen-reader text rather than
-   * removed, so the link keeps its name; `title` gives a sighted mouse user
-   * the same name on hover. The active link is marked with a bar down its left
-   * edge as well as colour — a bar reads at a glance where a muted/ink
-   * difference does not.
+   * The icon sits at a fixed distance from the left edge whatever the sidebar's
+   * width, so collapsing slides the edge in past still icons rather than
+   * shuffling them to the centre. The label fades instead of disappearing, and
+   * never wraps, so mid-animation it is clipped cleanly by the narrowing panel.
+   *
+   * Collapsed, the label stays in the accessibility tree — the link keeps its
+   * name — and `title` gives a mouse user the same name on hover. The active
+   * link is marked with a bar down its left edge as well as colour.
    */
   function navLink(item: NavItem, compact: boolean) {
     const active = isActive(item.href);
@@ -199,16 +205,22 @@ export function AdminShell({ children }: { children: ReactNode }) {
         href={item.href}
         aria-current={active ? 'page' : undefined}
         title={compact ? item.label : undefined}
-        className={`relative flex min-h-[44px] items-center gap-3 font-ui text-small ${
-          compact ? 'justify-center px-0' : 'px-4'
-        } ${active ? 'bg-paper-deep text-ink' : 'text-ink-muted hover:bg-paper-deep hover:text-ink'}`}
+        className={`relative flex min-h-[44px] items-center gap-3 whitespace-nowrap pl-[22px] pr-4 font-ui text-small ${
+          active ? 'bg-paper-deep text-ink' : 'text-ink-muted hover:bg-paper-deep hover:text-ink'
+        }`}
       >
         <span
           aria-hidden="true"
           className={`absolute inset-y-2 left-0 w-0.5 ${active ? 'bg-accent' : 'bg-transparent'}`}
         />
-        <Icon size={compact ? 20 : 18} />
-        <span className={compact ? 'sr-only' : ''}>{item.label}</span>
+        <Icon size={20} />
+        <span
+          className={`transition-opacity duration-200 motion-reduce:transition-none ${
+            compact ? 'opacity-0' : 'opacity-100'
+          }`}
+        >
+          {item.label}
+        </span>
       </Link>
     );
   }
@@ -217,21 +229,22 @@ export function AdminShell({ children }: { children: ReactNode }) {
     return (
       <>
         {groups.map((group) => (
-          <div key={group.label} className="mt-6 first:mt-0">
+          <div key={group.label} className="mt-5 first:mt-0">
             {/*
-              Collapsed, the group heading becomes a short rule: the gap still
-              separates the groups, and an icon rail has no room for words.
+              The heading keeps its height when collapsed — only its text
+              fades — so the links below do not jump up as the panel closes.
             */}
-            {compact ? (
-              <hr className="mx-4 mb-2 border-rule" />
-            ) : (
-              <p className="eyebrow mb-1 px-4">{group.label}</p>
-            )}
+            <p
+              className={`eyebrow mb-1 whitespace-nowrap pl-[22px] transition-opacity duration-200 motion-reduce:transition-none ${
+                compact ? 'opacity-0' : 'opacity-100'
+              }`}
+              aria-hidden={compact || undefined}
+            >
+              {group.label}
+            </p>
             <ul>
               {group.items.map((item) => (
-                <li key={item.href}>
-                  {navLink(item, compact)}
-                </li>
+                <li key={item.href}>{navLink(item, compact)}</li>
               ))}
             </ul>
           </div>
@@ -241,164 +254,139 @@ export function AdminShell({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen bg-paper-deep md:flex">
+    <div className="min-h-screen bg-paper-deep">
       {/*
-        The sidebar, from tablet width up.
-
-        Sticky at full height, so the navigation stays put while long tables
-        scroll beside it — the reason an admin moves its nav to the side at
-        all. It scrolls on its own if a short window cannot fit every link.
-
-        The width change is instant rather than animated: animating width
-        reflows the whole page on every frame, which this site's motion rules
-        rule out, and a toggle the user asked for does not need easing in.
+        One top bar at every width. On desktop it carries the brand, the
+        sidebar toggle and the account links, which leaves the sidebar beneath
+        it for navigation alone — short enough to fit a laptop screen without a
+        scrollbar of its own. On a phone it carries the brand and the menu
+        button. Sticky either way: the admin's long pages are tables.
       */}
-      <aside
-        aria-label="Admin"
-        className={`sticky top-0 hidden h-screen shrink-0 flex-col border-r border-rule bg-paper md:flex ${
-          collapsed ? 'w-16' : 'w-60'
-        }`}
-      >
-        <div
-          className={`flex items-center border-b border-rule py-4 ${
-            collapsed ? 'flex-col gap-3 px-2' : 'justify-between gap-2 px-4'
-          }`}
-        >
-          <Link
-            href="/admin"
-            className="flex items-center gap-2.5"
-            aria-label="ZHS Admin — dashboard"
-          >
-            <LogoMark className="h-7 w-auto text-ink" />
-            {!collapsed ? (
-              <span className="font-display text-h3" aria-hidden="true">
-                Admin
-              </span>
-            ) : null}
-          </Link>
-          <button
-            type="button"
-            onClick={toggleCollapsed}
-            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            aria-expanded={!collapsed}
-            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            className="flex min-h-[36px] min-w-[36px] items-center justify-center text-ink-muted hover:text-ink"
-          >
-            <IconSidebar size={18} />
-          </button>
-        </div>
-
-        <nav aria-label="Admin sections" className="flex-1 overflow-y-auto py-4">
-          {navGroups(collapsed)}
-        </nav>
-
-        <div className="border-t border-rule py-3">
-          {settings ? navLink(settings, collapsed) : null}
-
-          {/*
-            The role, not the account name. Which permissions you are working
-            under is what changes what this interface will let you do.
-          */}
-          {!collapsed ? (
-            <p className="eyebrow mt-3 px-4">Signed in as {user.role}</p>
-          ) : null}
-
-          <div className={collapsed ? 'mt-2' : 'mt-1'}>
-            <Link
-              href="/"
-              title={collapsed ? 'View site' : undefined}
-              className={`flex min-h-[40px] items-center gap-3 font-ui text-caption text-ink-muted hover:text-ink ${
-                collapsed ? 'justify-center' : 'px-4'
-              }`}
-            >
-              <IconExternal size={16} />
-              <span className={collapsed ? 'sr-only' : ''}>View site</span>
-            </Link>
+      <header className="sticky top-0 z-30 border-b border-rule bg-paper">
+        <div className="flex h-14 items-center justify-between gap-4 px-4 md:px-5">
+          <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={signOut}
-              title={collapsed ? 'Sign out' : undefined}
-              className={`flex min-h-[40px] w-full items-center gap-3 font-ui text-caption text-ink-muted hover:text-ink ${
-                collapsed ? 'justify-center' : 'px-4'
-              }`}
+              onClick={toggleCollapsed}
+              aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              aria-expanded={!collapsed}
+              aria-controls="admin-sidebar"
+              title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              className="-ml-1.5 hidden min-h-[40px] min-w-[40px] items-center justify-center text-ink-muted hover:text-ink md:flex"
             >
-              <IconSignOut size={16} />
-              <span className={collapsed ? 'sr-only' : ''}>Sign out</span>
+              <IconSidebar size={20} />
             </button>
-          </div>
-        </div>
-      </aside>
-
-      <div className="min-w-0 flex-1">
-        {/*
-          Phones keep a top bar with a menu button: a permanent sidebar would
-          take a third of the screen. Sticky, because the admin's long pages
-          are tables, and scrolling all the way back up to reach another
-          section is the whole reason a phone user gives up on an admin.
-        */}
-        <header className="sticky top-0 z-30 border-b border-rule bg-paper md:hidden">
-          <div className="shell flex items-center justify-between gap-4 py-3">
             <Link href="/admin" className="flex items-center gap-2.5" aria-label="ZHS Admin — dashboard">
               <LogoMark className="h-7 w-auto text-ink" />
               <span className="font-display text-h3" aria-hidden="true">
                 Admin
               </span>
             </Link>
+          </div>
 
-            {/*
-              A real <button> with aria-expanded and aria-controls, so a screen
-              reader announces the panel's state. 44px: below that a target is
-              genuinely hard to hit on a phone.
-            */}
+          {/*
+            The role, not the account name: which permissions you are working
+            under is what changes what this interface will let you do.
+          */}
+          <div className="hidden items-center gap-5 text-caption text-ink-muted md:flex">
+            <span className="uppercase tracking-wide">{user.role}</span>
+            <Link href="/" className="link-underline flex items-center gap-1.5 hover:text-ink">
+              <IconExternal size={14} />
+              View site
+            </Link>
             <button
               type="button"
-              onClick={() => setMenuOpen((open) => !open)}
-              aria-expanded={menuOpen}
-              aria-controls="admin-menu"
-              aria-label={menuOpen ? 'Close menu' : 'Open menu'}
-              className="-mr-2 flex min-h-[44px] min-w-[44px] items-center justify-center text-ink"
+              onClick={signOut}
+              className="link-underline flex items-center gap-1.5 hover:text-ink"
             >
-              {menuOpen ? <IconClose size={22} /> : <IconMenu size={22} />}
+              <IconSignOut size={14} />
+              Sign out
             </button>
           </div>
 
           {/*
-            Rendered only when open rather than hidden with CSS, so its links
-            stay out of the tab order while it is closed.
+            A real <button> with aria-expanded and aria-controls, so a screen
+            reader announces the panel's state. 44px: below that a target is
+            genuinely hard to hit on a phone.
           */}
-          {menuOpen ? (
-            <nav id="admin-menu" aria-label="Admin" className="border-t border-rule bg-paper py-4">
-              {navGroups(false)}
-              {settings ? (
-                <div className="mt-6">
-                  {navLink(settings, false)}
-                </div>
-              ) : null}
+          <button
+            type="button"
+            onClick={() => setMenuOpen((open) => !open)}
+            aria-expanded={menuOpen}
+            aria-controls="admin-menu"
+            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+            className="-mr-2 flex min-h-[44px] min-w-[44px] items-center justify-center text-ink md:hidden"
+          >
+            {menuOpen ? <IconClose size={22} /> : <IconMenu size={22} />}
+          </button>
+        </div>
 
-              <div className="mt-4 border-t border-rule px-4 pt-4">
-                <p className="text-caption text-ink-muted">
-                  {user.name} · <span className="uppercase tracking-wide">{user.role}</span>
-                </p>
-                <div className="mt-3 flex items-center gap-6">
-                  <Link href="/" className="flex items-center gap-2 py-2 font-ui text-small">
-                    <IconExternal size={18} />
-                    View site
-                  </Link>
-                  <button
-                    type="button"
-                    onClick={signOut}
-                    className="flex items-center gap-2 py-2 font-ui text-small"
-                  >
-                    <IconSignOut size={18} />
-                    Sign out
-                  </button>
-                </div>
+        {/*
+          The phone menu. Rendered only when open rather than hidden with CSS,
+          so its links stay out of the tab order while it is closed. Scrolls on
+          its own if a short phone cannot fit every link.
+        */}
+        {menuOpen ? (
+          <nav
+            id="admin-menu"
+            aria-label="Admin"
+            className="max-h-[calc(100dvh-3.5rem)] overflow-y-auto border-t border-rule bg-paper py-4 md:hidden"
+          >
+            {navGroups(false)}
+            {settings ? <div className="mt-5">{navLink(settings, false)}</div> : null}
+
+            <div className="mt-4 border-t border-rule px-[22px] pt-4">
+              <p className="text-caption text-ink-muted">
+                {user.name} · <span className="uppercase tracking-wide">{user.role}</span>
+              </p>
+              <div className="mt-3 flex items-center gap-6">
+                <Link href="/" className="flex items-center gap-2 py-2 font-ui text-small">
+                  <IconExternal size={18} />
+                  View site
+                </Link>
+                <button
+                  type="button"
+                  onClick={signOut}
+                  className="flex items-center gap-2 py-2 font-ui text-small"
+                >
+                  <IconSignOut size={18} />
+                  Sign out
+                </button>
               </div>
-            </nav>
-          ) : null}
-        </header>
+            </div>
+          </nav>
+        ) : null}
+      </header>
 
-        <main className="shell py-8 md:py-12">{children}</main>
+      <div className="md:flex">
+        {/*
+          The sidebar, from tablet width up, filling the height under the top
+          bar and staying put while long tables scroll beside it.
+
+          Its width animates when the toggle is pressed — and only then. The
+          transition class is added on the first press, so the remembered width
+          applies at once on page load instead of visibly sliding into place
+          every time the admin is opened. Reduced motion skips the animation.
+        */}
+        <aside
+          id="admin-sidebar"
+          aria-label="Admin"
+          className={`sticky top-14 hidden h-[calc(100vh-3.5rem)] shrink-0 flex-col overflow-hidden border-r border-rule bg-paper md:flex ${
+            collapsed ? 'w-16' : 'w-60'
+          } ${animate ? 'transition-[width] duration-200 ease-out motion-reduce:transition-none' : ''}`}
+        >
+          <nav aria-label="Admin sections" className="flex-1 overflow-y-auto overflow-x-hidden py-5">
+            {navGroups(collapsed)}
+          </nav>
+
+          {settings ? (
+            <div className="border-t border-rule py-3">{navLink(settings, collapsed)}</div>
+          ) : null}
+        </aside>
+
+        <main className="min-w-0 flex-1">
+          <div className="shell py-8 md:py-12">{children}</div>
+        </main>
       </div>
     </div>
   );

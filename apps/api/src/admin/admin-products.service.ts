@@ -66,7 +66,8 @@ export class AdminProductsService {
 
   async list(query: { search?: string; type?: string; status?: string; page?: number }) {
     const page = query.page ?? 1;
-    const perPage = 25;
+    // Fifteen fits a laptop screen without scrolling past the page controls.
+    const perPage = 15;
     const filters: SQL[] = [];
 
     if (query.search) {
