@@ -4,8 +4,9 @@ import { LogoTagline } from './logo-tagline';
 import { CartCount } from './cart-count';
 import { Eyebrow, HandDrawnRule } from './primitives';
 import { NewsletterForm } from './newsletter-form';
+import { DesktopNav } from './desktop-nav';
 import { MobileMenu } from './mobile-menu';
-import { DESKTOP_NAV, FOOTER_NAV } from './nav-items';
+import { FOOTER_NAV } from './nav-items';
 
 const SOCIAL = [
   { href: 'https://www.instagram.com/zhspress', label: 'Instagram' },
@@ -46,17 +47,7 @@ export function SiteHeader() {
           at a time; a header at this width says everything at once, and hiding
           three of them behind a hover would only make the fast case slower.
         */}
-        <nav aria-label="Primary" className="hidden md:block">
-          <ul className="flex items-center gap-8">
-            {DESKTOP_NAV.map((item) => (
-              <li key={item.href}>
-                <Link href={item.href} className="link-underline text-small">
-                  {item.label}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
+        <DesktopNav />
 
         <div className="flex items-center gap-6">
           <CartCount />

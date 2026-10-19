@@ -13,6 +13,7 @@ import { DB } from '../db/db.module';
 import { AuditService } from './audit.service';
 import { WaitlistNotifier } from './waitlist-notifier.service';
 import type { AdminPrincipal } from '../auth/auth.service';
+import { ADMIN_PER_PAGE, pageOf, toPage } from './pagination';
 
 @Injectable()
 export class AdminProductsService {
@@ -65,9 +66,8 @@ export class AdminProductsService {
   }
 
   async list(query: { search?: string; type?: string; status?: string; page?: number }) {
-    const page = query.page ?? 1;
-    // Fifteen fits a laptop screen without scrolling past the page controls.
-    const perPage = 15;
+    const page = toPage(query.page);
+    const perPage = ADMIN_PER_PAGE;
     const filters: SQL[] = [];
 
     if (query.search) {
@@ -102,7 +102,7 @@ export class AdminProductsService {
       },
     });
 
-    return { items, page, perPage, total, totalPages: Math.max(1, Math.ceil(total / perPage)) };
+    return pageOf(items, page, total);
   }
 
   /**

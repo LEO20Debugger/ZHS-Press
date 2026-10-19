@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import type { ProductType } from '@zhs/shared';
 import { FilterDropdown } from '@/components/filter-dropdown';
+import { IconBooks, IconGrid, IconMagazine, IconSort, IconStationery } from '@/components/nav-icons';
 import { ProductGrid } from '@/components/product-card';
 import { Eyebrow, HandDrawnRule } from '@/components/primitives';
 import { listProducts } from '@/lib/catalog';
@@ -11,11 +12,16 @@ export const metadata: Metadata = {
   description: 'Books, LIGHT magazine issues, and stationery from ZHS Press. Worldwide delivery.',
 };
 
+/*
+ * Each category carries an icon beside its name, never instead of it: a
+ * glyph alone cannot tell a magazine from a book at a glance, and a filter you
+ * have to guess at is slower than one you can read.
+ */
 const FILTERS = [
-  { value: undefined, label: 'Everything' },
-  { value: 'book', label: 'Books' },
-  { value: 'magazine', label: 'Magazines' },
-  { value: 'stationery', label: 'Stationery' },
+  { value: undefined, label: 'Everything', Icon: IconGrid },
+  { value: 'book', label: 'Books', Icon: IconBooks },
+  { value: 'magazine', label: 'Magazines', Icon: IconMagazine },
+  { value: 'stationery', label: 'Stationery', Icon: IconStationery },
 ] as const;
 
 const SORTS = [
@@ -59,6 +65,12 @@ export default async function ShopPage({ searchParams }: { searchParams: SearchP
     return queryString ? `/shop?${queryString}` : '/shop';
   };
 
+  const sortOptions = SORTS.map((option) => ({
+    href: sortHrefFor(option.value),
+    label: option.label,
+    current: option.value === sort,
+  }));
+
   return (
     <>
       <div className="shell py-16 md:py-20">
@@ -87,20 +99,18 @@ export default async function ShopPage({ searchParams }: { searchParams: SearchP
               href: hrefFor(filter.value),
               label: filter.label,
               current: filter.value === category,
+              icon: <filter.Icon size={16} />,
             }))}
           />
           <FilterDropdown
             label="Sort"
             align="right"
-            options={SORTS.map((option) => ({
-              href: sortHrefFor(option.value),
-              label: option.label,
-              current: option.value === sort,
-            }))}
+            icon={<IconSort size={16} />}
+            options={sortOptions}
           />
         </div>
 
-        <div className="shell hidden flex-wrap items-center justify-between gap-x-4 gap-y-3 py-4 sm:flex">
+        <div className="shell hidden items-center justify-between gap-4 py-3 sm:flex">
           <nav aria-label="Filter by category">
             <ul className="flex flex-wrap gap-2">
               {FILTERS.map((filter) => {
@@ -110,12 +120,13 @@ export default async function ShopPage({ searchParams }: { searchParams: SearchP
                     <Link
                       href={hrefFor(filter.value)}
                       aria-current={active ? 'page' : undefined}
-                      className={`inline-block rounded-pill px-4 py-1.5 font-ui text-caption uppercase tracking-wide transition-colors duration-base ${
+                      className={`inline-flex items-center gap-2 rounded-pill py-2 pl-3.5 pr-4 font-ui text-small transition-colors duration-base ${
                         active
                           ? 'bg-ink text-paper'
                           : 'border border-rule text-ink-muted hover:border-ink hover:text-ink'
                       }`}
                     >
+                      <filter.Icon size={16} />
                       {filter.label}
                     </Link>
                   </li>
@@ -124,22 +135,22 @@ export default async function ShopPage({ searchParams }: { searchParams: SearchP
             </ul>
           </nav>
 
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-            <p className="text-caption text-ink-muted">{total} items</p>
-            <nav aria-label="Sort" className="flex flex-wrap items-center gap-x-4 gap-y-1">
-              {SORTS.map((option) => (
-                <Link
-                  key={option.value}
-                  href={sortHrefFor(option.value)}
-                  aria-current={option.value === sort ? 'true' : undefined}
-                  className={`whitespace-nowrap py-1.5 text-caption ${
-                    option.value === sort ? 'text-ink underline' : 'text-ink-muted'
-                  }`}
-                >
-                  {option.label}
-                </Link>
-              ))}
-            </nav>
+          {/*
+            Sort is one control rather than four links: the choice is made
+            rarely, and laid out flat it took half the bar and competed with the
+            categories for attention. The count sits beside it, so the result of
+            a filter is readable without scrolling.
+          */}
+          <div className="flex items-center gap-4">
+            <p className="whitespace-nowrap text-caption text-ink-muted">
+              {total} {total === 1 ? 'item' : 'items'}
+            </p>
+            <FilterDropdown
+              label="Sort"
+              align="right"
+              icon={<IconSort size={16} />}
+              options={sortOptions}
+            />
           </div>
         </div>
       </div>

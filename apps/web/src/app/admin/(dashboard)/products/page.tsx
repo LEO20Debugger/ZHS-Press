@@ -8,6 +8,7 @@ import {
   useHasHover,
   type PreviewTarget,
 } from '@/components/admin/cover-preview';
+import { Pager, pageInfoOf, usePageNumber, type PageInfo } from '@/components/admin/pager';
 import { StockStepper } from '@/components/admin/stock-stepper';
 import { Button, Eyebrow, HandDrawnRule } from '@/components/primitives';
 
@@ -32,68 +33,16 @@ const STATUS_TONE: Record<string, string> = {
   archived: 'bg-paper-deep text-ink-muted',
 };
 
-interface PageInfo {
-  page: number;
-  perPage: number;
-  total: number;
-  totalPages: number;
-}
-
-const PAGE_KEY = 'zhs-admin-catalogue-page';
-
-/**
- * Which page to open on: the address bar's if it names one, otherwise the page
- * last viewed in this tab. The second is what makes "Back to catalogue" from a
- * product land where you left off — that link is a plain /admin/products.
- */
-function initialPage(): number {
-  const parse = (raw: string | null) => {
-    const value = Number(raw);
-    return Number.isInteger(value) && value > 0 ? value : null;
-  };
-
-  const fromUrl = parse(new URLSearchParams(window.location.search).get('page'));
-  if (fromUrl) return fromUrl;
-
-  try {
-    return parse(window.sessionStorage.getItem(PAGE_KEY)) ?? 1;
-  } catch {
-    return 1;
-  }
-}
-
 export default function AdminProductsPage() {
   const [rows, setRows] = useState<Row[]>([]);
   const [search, setSearch] = useState('');
-  const [page, setPage] = useState<number | null>(null);
+  // Remembered across the plain "Back to catalogue" link from a product.
+  const [page, setPage] = usePageNumber('zhs-admin-catalogue-page');
   const [info, setInfo] = useState<PageInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [preview, setPreview] = useState<PreviewTarget | null>(null);
   const [cursor, setCursor] = useState({ x: 0, y: 0 });
   const hasHover = useHasHover();
-
-  // Read after mount: the server render has no address bar or storage.
-  useEffect(() => {
-    setPage(initialPage());
-  }, []);
-
-  /*
-   * Mirror the page into the address bar without a navigation, so a refresh
-   * or a shared link keeps it, and into session storage, so the back link from
-   * a product does. Storage can be unavailable; the address bar still works.
-   */
-  useEffect(() => {
-    if (page == null) return;
-    const url = new URL(window.location.href);
-    if (page > 1) url.searchParams.set('page', String(page));
-    else url.searchParams.delete('page');
-    window.history.replaceState(null, '', url);
-    try {
-      window.sessionStorage.setItem(PAGE_KEY, String(page));
-    } catch {
-      // Not remembered across the back link this time.
-    }
-  }, [page]);
 
   useEffect(() => {
     if (page == null) return;
@@ -111,18 +60,17 @@ export default function AdminProductsPage() {
             return;
           }
           setRows(d.items ?? []);
-          setInfo(d.totalPages ? { page: d.page, perPage: d.perPage, total: d.total, totalPages: d.totalPages } : null);
+          setInfo(pageInfoOf(d));
         })
         .finally(() => setLoading(false));
     }, 250);
     return () => clearTimeout(timer);
-  }, [search, page]);
+  }, [search, page, setPage]);
 
   function goTo(next: number) {
     setPage(next);
     setConfirming(null);
     setPreview(null);
-    window.scrollTo({ top: 0 });
   }
 
   /*
@@ -383,43 +331,7 @@ export default function AdminProductsPage() {
         </div>
       )}
 
-      {/*
-        Only when there is more than one page. "26–50 of 73" rather than just
-        "Page 2 of 3", because the count is what tells you whether the title you
-        are looking for could be on another page at all.
-      */}
-      {!loading && info && info.totalPages > 1 ? (
-        <nav
-          aria-label="Catalogue pages"
-          className="mt-6 flex flex-wrap items-center justify-between gap-4 font-ui text-small"
-        >
-          <p className="text-ink-muted">
-            {(info.page - 1) * info.perPage + 1}–{Math.min(info.page * info.perPage, info.total)} of{' '}
-            {info.total}
-          </p>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => goTo(info.page - 1)}
-              disabled={info.page <= 1}
-              className="min-h-[40px] border border-rule bg-paper px-4 hover:border-ink disabled:pointer-events-none disabled:opacity-40"
-            >
-              <span aria-hidden="true">&larr;</span> Previous
-            </button>
-            <span className="px-2 text-ink-muted">
-              Page {info.page} of {info.totalPages}
-            </span>
-            <button
-              type="button"
-              onClick={() => goTo(info.page + 1)}
-              disabled={info.page >= info.totalPages}
-              className="min-h-[40px] border border-rule bg-paper px-4 hover:border-ink disabled:pointer-events-none disabled:opacity-40"
-            >
-              Next <span aria-hidden="true">&rarr;</span>
-            </button>
-          </div>
-        </nav>
-      ) : null}
+      <Pager info={loading ? null : info} onPage={goTo} label="Catalogue pages" />
 
       <CoverPreview target={preview} x={cursor.x} y={cursor.y} />
     </div>

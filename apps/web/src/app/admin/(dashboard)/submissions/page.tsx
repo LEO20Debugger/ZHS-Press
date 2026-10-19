@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { Pager, pageInfoOf, usePageNumber, type PageInfo } from '@/components/admin/pager';
 import { Eyebrow, HandDrawnRule } from '@/components/primitives';
 
 interface Submission {
@@ -16,18 +17,30 @@ interface Submission {
 
 export default function AdminSubmissionsPage() {
   const [items, setItems] = useState<Submission[]>([]);
+  const [info, setInfo] = useState<PageInfo | null>(null);
+  const [page, setPage] = usePageNumber('zhs-admin-submissions-page');
   const [open, setOpen] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
 
-  async function load() {
-    const response = await fetch('/api/admin/admin/submissions', { cache: 'no-store' });
-    setItems(response.ok ? await response.json() : []);
+  const load = useCallback(async () => {
+    if (page == null) return;
+    const response = await fetch(`/api/admin/admin/submissions?page=${page}`, { cache: 'no-store' });
+    const body = response.ok ? await response.json() : null;
+    const pageInfo = pageInfoOf(body);
+
+    if (pageInfo && page > pageInfo.totalPages) {
+      setPage(pageInfo.totalPages);
+      return;
+    }
+
+    setItems(body?.items ?? []);
+    setInfo(pageInfo);
     setLoading(false);
-  }
+  }, [page, setPage]);
 
   useEffect(() => {
     void load();
-  }, []);
+  }, [load]);
 
   async function setStatus(id: number, status: string) {
     await fetch(`/api/admin/admin/submissions/${id}`, {
@@ -93,6 +106,15 @@ export default function AdminSubmissionsPage() {
           ))}
         </ul>
       )}
+
+      <Pager
+        info={loading ? null : info}
+        onPage={(next) => {
+          setPage(next);
+          setOpen(null);
+        }}
+        label="Submission pages"
+      />
     </div>
   );
 }

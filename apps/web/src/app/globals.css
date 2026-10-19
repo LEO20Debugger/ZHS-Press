@@ -206,7 +206,8 @@
     transition: background-size var(--duration-base) var(--ease-out);
   }
 
-  .link-underline:hover {
+  .link-underline:hover,
+  .link-underline-active {
     background-size: 100% 1px;
   }
 }

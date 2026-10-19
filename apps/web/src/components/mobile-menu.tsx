@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import { Fragment } from 'react';
 import { createPortal } from 'react-dom';
 import { IconClose, IconHome } from './nav-icons';
-import { NAV } from './nav-items';
+import { isCurrentSection, NAV } from './nav-items';
 import { useDisclosure } from './use-disclosure';
 
 /**
@@ -15,7 +15,8 @@ import { useDisclosure } from './use-disclosure';
  * included, and drives the stagger: the rows arrive top to bottom in the order
  * the eye reads them, regardless of how the list is nested to produce them.
  *
- * The current page is marked from the pathname alone, so a row carrying a query
+ * The current section is marked from the pathname alone (see
+ * isCurrentSection), so a row carrying a query
  * — Stationery — never marks itself. Reading the query would mean
  * `useSearchParams`, which opts the whole header into client-side rendering
  * boundaries it does not otherwise need, to light one row on one page.
@@ -35,7 +36,7 @@ function Row({
   index: number;
   pathname: string;
 }) {
-  const current = !href.includes('?') && pathname === href;
+  const current = isCurrentSection(pathname, href);
 
   return (
     <li className="menu-item" style={{ '--menu-index': index } as React.CSSProperties}>

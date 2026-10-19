@@ -134,3 +134,26 @@ export function IconAbout(props: IconProps) {
     </Svg>
   );
 }
+
+/** Everything: four tiles, the whole catalogue at once. */
+export function IconGrid(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <rect x="4" y="4" width="6.5" height="6.5" rx="1" />
+      <rect x="13.5" y="4" width="6.5" height="6.5" rx="1" />
+      <rect x="4" y="13.5" width="6.5" height="6.5" rx="1" />
+      <rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1" />
+    </Svg>
+  );
+}
+
+/** Sort: lines shortening, the list put in order. */
+export function IconSort(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M4 7h16" />
+      <path d="M4 12h11" />
+      <path d="M4 17h6" />
+    </Svg>
+  );
+}

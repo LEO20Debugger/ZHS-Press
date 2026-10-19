@@ -18,7 +18,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
-import { and, desc, eq } from 'drizzle-orm';
+import { and, count, desc, eq } from 'drizzle-orm';
 import { Inject } from '@nestjs/common';
 import { schema, type Database } from '@zhs/db';
 import {
@@ -45,6 +45,8 @@ import { AdminProductsService } from './admin-products.service';
 import { AudienceService } from './audience.service';
 import { AuditService } from './audit.service';
 import { ContributorsService } from './contributors.service';
+import { deletionBlockedReason, isTestPayment, OrderDeletionService } from './order-deletion';
+import { ADMIN_PER_PAGE, pageOf, toPage } from './pagination';
 import { ParityService } from './parity.service';
 import { ShippingService } from './shipping.service';
 import { StorageService } from '../storage/storage.service';
@@ -72,6 +74,7 @@ export class AdminController {
     private readonly mail: MailService,
     private readonly config: ConfigService<Env, true>,
     private readonly shipping: ShippingService,
+    private readonly orderDeletion: OrderDeletionService,
   ) {}
 
   /* ---- Catalogue: editors and admins ---------------------------------- */
@@ -83,15 +86,7 @@ export class AdminController {
     @Query('status') status?: string,
     @Query('page') page?: string,
   ) {
-    // Anything that is not a positive whole number is page 1. Number('abc') is
-    // NaN, and a NaN offset reaches the database as an invalid query.
-    const pageNumber = Number(page);
-    return this.products.list({
-      search,
-      type,
-      status,
-      page: Number.isInteger(pageNumber) && pageNumber > 0 ? pageNumber : 1,
-    });
+    return this.products.list({ search, type, status, page: toPage(page) });
   }
 
   /** The palette the colour picker offers, with each option's text pairing. */
@@ -359,12 +354,23 @@ export class AdminController {
   }
 
   @Get('submissions')
-  listSubmissions(@Query('status') status?: string) {
-    return this.db.query.submissions.findMany({
-      where: status ? eq(schema.submissions.status, status as 'new') : undefined,
+  async listSubmissions(@Query('status') status?: string, @Query('page') page?: string) {
+    const pageNumber = toPage(page);
+    const where = status ? eq(schema.submissions.status, status as 'new') : undefined;
+
+    const [{ value: total } = { value: 0 }] = await this.db
+      .select({ value: count() })
+      .from(schema.submissions)
+      .where(where);
+
+    const items = await this.db.query.submissions.findMany({
+      where,
       orderBy: [desc(schema.submissions.createdAt)],
-      limit: 100,
+      limit: ADMIN_PER_PAGE,
+      offset: (pageNumber - 1) * ADMIN_PER_PAGE,
     });
+
+    return pageOf(items, pageNumber, total);
   }
 
   @Patch('submissions/:id')
@@ -398,13 +404,46 @@ export class AdminController {
 
   @Get('orders')
   @Roles('admin')
-  listOrders(@Query('status') status?: string) {
-    return this.db.query.orders.findMany({
-      where: status ? eq(schema.orders.status, status as 'paid') : undefined,
+  async listOrders(@Query('status') status?: string, @Query('page') page?: string) {
+    const pageNumber = toPage(page);
+    const where = status ? eq(schema.orders.status, status as 'paid') : undefined;
+
+    const [{ value: total } = { value: 0 }] = await this.db
+      .select({ value: count() })
+      .from(schema.orders)
+      .where(where);
+
+    const rows = await this.db.query.orders.findMany({
+      where,
       orderBy: [desc(schema.orders.createdAt)],
-      limit: 100,
-      with: { items: true },
+      limit: ADMIN_PER_PAGE,
+      offset: (pageNumber - 1) * ADMIN_PER_PAGE,
+      with: { items: true, payments: { columns: { status: true, rawPayload: true } } },
     });
+
+    /*
+     * Two flags per row, worked out here so the page does not have to receive
+     * — or reason about — raw provider payloads: whether it was a sandbox
+     * order, and whether it may be deleted. The payloads themselves are dropped.
+     */
+    const items = rows.map(({ payments, ...order }) => ({
+      ...order,
+      isTest: payments.some((p) => p.status === 'successful' && isTestPayment(p.rawPayload)),
+      deletable: deletionBlockedReason(order, payments) === null,
+    }));
+
+    return pageOf(items, pageNumber, total);
+  }
+
+  /**
+   * Permanently removes an order. Admins only, and only orders that were never
+   * paid or were paid in Stripe's sandbox — a real sale is refused with a 409
+   * explaining why. See OrderDeletionService.
+   */
+  @Delete('orders/:orderNumber')
+  @Roles('admin')
+  deleteOrder(@Param('orderNumber') orderNumber: string, @Req() request: AuthenticatedRequest) {
+    return this.orderDeletion.remove(orderNumber, request.admin!);
   }
 
   @Get('orders/:orderNumber')

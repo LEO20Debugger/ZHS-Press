@@ -66,3 +66,20 @@ export const FOOTER_NAV = NAV.flatMap((item) => [
   { href: item.href, label: item.label },
   ...('children' in item ? item.children.map((c) => ({ href: c.href, label: c.label })) : []),
 ]).sort((a, b) => a.label.localeCompare(b.label));
+
+/**
+ * Whether a nav link names the section the reader is in.
+ *
+ * A section, not just a page: Books stays lit on a book's own page, and Shop
+ * on a journal's, because that is where the reader still is. Prefix matching
+ * is bounded by a slash so /shop does not light up for an unrelated /shopping.
+ *
+ * Links carrying a query (the phone menu's "Stationery", a filtered shop) are
+ * never marked: telling them apart from plain /shop would mean reading search
+ * params, which opts the whole header out of static rendering for one row.
+ */
+export function isCurrentSection(pathname: string, href: string): boolean {
+  if (href.includes('?')) return false;
+  if (href === '/') return pathname === '/';
+  return pathname === href || pathname.startsWith(`${href}/`);
+}

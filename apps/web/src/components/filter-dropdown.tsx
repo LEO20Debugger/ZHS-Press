@@ -8,6 +8,8 @@ export interface FilterOption {
   href: string;
   label: string;
   current: boolean;
+  /** Shown before the label, in the trigger when selected and in the list. */
+  icon?: React.ReactNode;
 }
 
 /**
@@ -33,11 +35,14 @@ export function FilterDropdown({
   label,
   options,
   align = 'left',
+  icon,
 }: {
   /** The quiet part — what is being chosen. */
   label: string;
   options: FilterOption[];
   align?: 'left' | 'right';
+  /** Leads the trigger, e.g. a sort glyph. The selected option's own icon is used if absent. */
+  icon?: React.ReactNode;
 }) {
   const { ref, closing, close } = useDisclosure();
 
@@ -52,8 +57,11 @@ export function FilterDropdown({
   return (
     <details ref={ref} className="group relative">
       <summary className="flex cursor-pointer list-none items-center gap-2 rounded-pill border border-rule px-4 py-2 transition-colors duration-fast hover:border-ink [&::-webkit-details-marker]:hidden">
+        {icon ?? selected.icon ? (
+          <span className="text-ink-muted">{icon ?? selected.icon}</span>
+        ) : null}
         <span className="eyebrow">{label}</span>
-        <span className="text-small">{selected.label}</span>
+        <span className="whitespace-nowrap text-small">{selected.label}</span>
         {/* Turns over when open, so the control says which way it will go. */}
         <IconChevron
           size={14}
@@ -83,10 +91,11 @@ export function FilterDropdown({
             <Link
               href={option.href}
               aria-current={option.current ? 'true' : undefined}
-              className={`block rounded-sm px-3 py-2.5 text-small transition-colors duration-fast ${
+              className={`flex items-center gap-2.5 rounded-sm px-3 py-2.5 text-small transition-colors duration-fast ${
                 option.current ? 'bg-paper-deep text-ink' : 'text-ink-muted hover:bg-paper'
               }`}
             >
+              {option.icon}
               {option.label}
             </Link>
           </li>
