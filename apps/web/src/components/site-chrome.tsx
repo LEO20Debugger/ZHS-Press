@@ -5,6 +5,7 @@ import { CartCount } from './cart-count';
 import { Eyebrow, HandDrawnRule } from './primitives';
 import { NewsletterForm } from './newsletter-form';
 import { DesktopNav } from './desktop-nav';
+import { HeaderAutoHide } from './header-auto-hide';
 import { MobileMenu } from './mobile-menu';
 import { FOOTER_NAV } from './nav-items';
 
@@ -15,7 +16,8 @@ const SOCIAL = [
 
 export function SiteHeader() {
   return (
-    <header className="sticky top-0 z-50 border-b border-rule bg-paper/95 backdrop-blur">
+    <header data-site-header className="bar-frosted sticky top-0 z-50 border-b border-rule">
+      <HeaderAutoHide />
       <div className="shell flex items-center justify-between gap-8 py-4">
         {/*
           The lockup set horizontally — mark, then tagline beside it — rather

@@ -82,7 +82,7 @@ export default async function ShopPage({ searchParams }: { searchParams: SearchP
         </p>
       </div>
 
-      <div className="sticky top-[var(--header-height)] z-40 border-y border-rule bg-paper/95 backdrop-blur">
+      <div className="bar-frosted sticky-under-header sticky z-40 border-y border-rule">
         {/*
           Two presentations of one set of controls.
 
@@ -111,12 +111,18 @@ export default async function ShopPage({ searchParams }: { searchParams: SearchP
         </div>
 
         <div className="shell hidden items-center justify-between gap-4 py-3 sm:flex">
-          <nav aria-label="Filter by category">
-            <ul className="flex flex-wrap gap-2">
+          {/*
+            One row at every width. Between tablet and desktop the four chips
+            and the sort control do not quite fit side by side; wrapping them
+            doubled the height of a bar that stays on screen the whole visit.
+            The chips scroll sideways instead, and Sort stays put.
+          */}
+          <nav aria-label="Filter by category" className="-my-1 min-w-0 py-1">
+            <ul className="no-scrollbar flex gap-2 overflow-x-auto pr-8 [mask-image:linear-gradient(to_right,black_calc(100%-2.5rem),transparent)] lg:pr-0 lg:[mask-image:none]">
               {FILTERS.map((filter) => {
                 const active = filter.value === category;
                 return (
-                  <li key={filter.label}>
+                  <li key={filter.label} className="shrink-0">
                     <Link
                       href={hrefFor(filter.value)}
                       aria-current={active ? 'page' : undefined}
@@ -141,7 +147,7 @@ export default async function ShopPage({ searchParams }: { searchParams: SearchP
             categories for attention. The count sits beside it, so the result of
             a filter is readable without scrolling.
           */}
-          <div className="flex items-center gap-4">
+          <div className="flex shrink-0 items-center gap-4">
             <p className="whitespace-nowrap text-caption text-ink-muted">
               {total} {total === 1 ? 'item' : 'items'}
             </p>

@@ -118,7 +118,7 @@ export function Modal({
       ref={ref}
       onClick={onBackdropClick}
       aria-label={title}
-      className="w-[min(44rem,calc(100vw-2rem))] border border-rule bg-paper-raised p-0 text-ink backdrop:bg-ink/40 backdrop:backdrop-blur-sm"
+      className="w-[min(44rem,calc(100vw-2rem))] border border-rule bg-paper-raised p-0 text-ink backdrop:bg-[color-mix(in_srgb,var(--ink)_40%,transparent)] backdrop:backdrop-blur-sm"
     >
       {/*
         Rendered only while open so the content unmounts on close — otherwise a

@@ -109,6 +109,59 @@
     min-height: 3rem;
   }
 
+  /*
+   * Frosted paper, for bars that stay on screen while content scrolls beneath
+   * them — the site header and the shop's filter bar.
+   *
+   * Written out here because Tailwind cannot do it from the palette: the
+   * colours are CSS variables, so `bg-paper/95` generated no rule at all and
+   * those bars had blur with nothing behind it — covers showed straight through
+   * the navigation. color-mix gives the variable an alpha; the plain colour
+   * before it is the fallback for a browser without color-mix, where the bar
+   * is simply solid.
+   */
+  .bar-frosted {
+    background-color: var(--paper);
+    background-color: color-mix(in srgb, var(--paper) 92%, transparent);
+    -webkit-backdrop-filter: blur(14px) saturate(1.2);
+    backdrop-filter: blur(14px) saturate(1.2);
+  }
+
+  /*
+   * The site header slides away while reading down a page and returns on the
+   * first scroll up (HeaderAutoHide sets data-header-hidden on <html>).
+   *
+   * Anything that sticks beneath the header — the shop's filter bar — follows
+   * it by its `top`, not a transform. `top` only acts once the bar is actually
+   * stuck, so while it is still in the page's flow it stays exactly where it
+   * is; a transform would shift it up into the text above it.
+   */
+  [data-site-header] {
+    transition: transform 280ms var(--ease-out);
+  }
+
+  html[data-header-hidden] [data-site-header] {
+    transform: translateY(-100%);
+  }
+
+  .sticky-under-header {
+    top: var(--header-height);
+    transition: top 280ms var(--ease-out);
+  }
+
+  html[data-header-hidden] .sticky-under-header {
+    top: 0;
+  }
+
+  /* A row that scrolls sideways by touch or trackpad without drawing a scrollbar. */
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
   .shell {
     width: 100%;
     max-width: var(--shell-max);
@@ -419,6 +472,12 @@
   .tilt,
   .tilt[data-tilting='true'] {
     transform: none !important;
+    transition: none !important;
+  }
+
+  /* The header still gets out of the way; it just does not slide doing it. */
+  [data-site-header],
+  .sticky-under-header {
     transition: none !important;
   }
 }
