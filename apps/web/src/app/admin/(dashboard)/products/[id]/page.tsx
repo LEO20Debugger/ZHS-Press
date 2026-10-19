@@ -909,8 +909,8 @@ export default function ProductEditPage({ params }: { params: Promise<{ id: stri
           the form is in: a page this long otherwise leaves you scrolling to the
           bottom to find out whether anything needs saving.
         */}
-        <div className="sticky bottom-0 z-20 -mx-4 mt-8 border-t border-rule bg-paper px-4 py-4 sm:-mx-6 sm:px-6">
-          <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="sticky bottom-0 z-20 -mx-4 mt-8 flex min-h-[var(--admin-footer-h)] items-center border-t border-rule bg-paper px-4 py-3 sm:-mx-6 sm:px-6 md:py-0">
+          <div className="flex w-full flex-wrap items-center justify-between gap-4">
             <p role="status" className={`text-caption ${message ? 'text-danger' : 'text-ink-muted'}`}>
               {message ??
                 (dirty

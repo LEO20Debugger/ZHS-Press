@@ -254,7 +254,16 @@ export function AdminShell({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen bg-paper-deep">
+    /*
+      --admin-footer-h is shared by the sidebar's Settings strip and any page's
+      sticky action bar (the product form's save bar). Both sit on the bottom
+      edge of the screen side by side, so equal heights put their top rules on
+      one straight line instead of a step where they meet.
+    */
+    <div
+      className="min-h-screen bg-paper-deep"
+      style={{ '--admin-footer-h': '76px' } as React.CSSProperties}
+    >
       {/*
         One top bar at every width. On desktop it carries the brand, the
         sidebar toggle and the account links, which leaves the sidebar beneath
@@ -263,7 +272,9 @@ export function AdminShell({ children }: { children: ReactNode }) {
         button. Sticky either way: the admin's long pages are tables.
       */}
       <header className="sticky top-0 z-30 border-b border-rule bg-paper">
-        <div className="flex h-14 items-center justify-between gap-4 px-4 md:px-5">
+        {/* One pixel short of 3.5rem, so the bar *with* its bottom border is
+            exactly the 3.5rem the sidebar below is positioned against. */}
+        <div className="flex h-[calc(3.5rem-1px)] items-center justify-between gap-4 px-4 md:px-5">
           <div className="flex items-center gap-3">
             <button
               type="button"
@@ -380,7 +391,9 @@ export function AdminShell({ children }: { children: ReactNode }) {
           </nav>
 
           {settings ? (
-            <div className="border-t border-rule py-3">{navLink(settings, collapsed)}</div>
+            <div className="flex h-[var(--admin-footer-h)] shrink-0 items-center border-t border-rule">
+              <div className="w-full">{navLink(settings, collapsed)}</div>
+            </div>
           ) : null}
         </aside>
 
