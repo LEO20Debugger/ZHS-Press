@@ -107,6 +107,18 @@ export function IconSettings(props: IconProps) {
   );
 }
 
+/** Delete: a bin, lid on. */
+export function IconTrash(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M4 7h16" />
+      <path d="M9 7V4.5h6V7" />
+      <path d="M6 7l1 13h10l1-13" />
+      <path d="M10 11v5.5M14 11v5.5" />
+    </Svg>
+  );
+}
+
 /** Collapse or expand the sidebar: a panel with its rail marked. */
 export function IconSidebar(props: IconProps) {
   return (

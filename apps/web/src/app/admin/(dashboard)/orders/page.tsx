@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { formatMoney } from '@zhs/shared';
-import { IconView } from '@/components/admin/icons';
+import { IconTrash, IconView } from '@/components/admin/icons';
 import { Modal } from '@/components/admin/modal';
 import { OrderDetailPanel } from '@/components/admin/order-detail';
 import { Pager, pageInfoOf, usePageNumber, type PageInfo } from '@/components/admin/pager';
@@ -269,6 +269,14 @@ export default function AdminOrdersPage() {
                           sandbox orders. A real sale shows no delete at all
                           rather than a button that can only ever refuse.
                         */}
+                        {/*
+                          An icon, like View beside it, so the two row actions
+                          read as a matching pair. Its name lives on the button
+                          and says which order — a column of identical "Delete"
+                          labels tells a screen-reader user nothing. The
+                          two-step confirm still follows in words, because that
+                          is the moment that must not be misread.
+                        */}
                         {order.deletable ? (
                           <button
                             type="button"
@@ -276,11 +284,17 @@ export default function AdminOrdersPage() {
                               setConfirming(order.orderNumber);
                               setError(null);
                             }}
-                            className="font-ui text-caption text-ink-muted underline underline-offset-2 hover:text-danger"
+                            aria-label={`Delete order ${order.orderNumber}`}
+                            title="Delete order"
+                            className="p-1 text-ink-muted transition-colors hover:text-danger focus-visible:text-danger"
                           >
-                            Delete<span className="sr-only"> order {order.orderNumber}</span>
+                            <IconTrash size={18} />
                           </button>
-                        ) : null}
+                        ) : (
+                          // Holds the column's width, so the View icons line up
+                          // down the table whether or not a row can be deleted.
+                          <span aria-hidden="true" className="inline-block w-[26px]" />
+                        )}
                       </div>
                     )}
                   </td>

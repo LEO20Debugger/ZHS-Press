@@ -9,19 +9,25 @@ import { AuditService } from './audit.service';
 const UNPAID = new Set(['pending', 'failed', 'cancelled']);
 
 /**
- * Whether a payment was made in Stripe's sandbox.
+ * Whether a payment was made in a sandbox rather than with real money.
  *
- * Read from the session Stripe returned, which settlement stores on the
- * payment row. Only an explicit `livemode: false` counts: a payload without the
- * field — an older provider's, or none at all — is treated as real money,
- * because guessing wrong in that direction deletes a genuine sale.
+ * Two ways to know:
+ *
+ *  - Stripe: the session Stripe returned, which settlement stores on the
+ *    payment row, says `livemode: false`. Only that explicit value counts; a
+ *    payload without the field is treated as real money, because guessing
+ *    wrong in that direction deletes a genuine sale.
+ *
+ *  - Flutterwave: the shop ran on Flutterwave only before launch, and only
+ *    ever with test keys — confirmed by the press — and has since moved to
+ *    Stripe. Its payloads carry no live/test marker, so the provider itself
+ *    is the evidence. If Flutterwave ever takes real money again, this rule
+ *    must go first.
  */
-export function isTestPayment(rawPayload: unknown): boolean {
-  return (
-    typeof rawPayload === 'object' &&
-    rawPayload !== null &&
-    (rawPayload as { livemode?: unknown }).livemode === false
-  );
+export function isTestPayment(payment: { provider?: string; rawPayload: unknown }): boolean {
+  if (payment.provider === 'flutterwave') return true;
+  const raw = payment.rawPayload;
+  return typeof raw === 'object' && raw !== null && (raw as { livemode?: unknown }).livemode === false;
 }
 
 /**
@@ -34,12 +40,12 @@ export function isTestPayment(rawPayload: unknown): boolean {
  */
 export function deletionBlockedReason(
   order: { status: string },
-  payments: Array<{ status: string; rawPayload: unknown }>,
+  payments: Array<{ status: string; provider?: string; rawPayload: unknown }>,
 ): string | null {
   if (UNPAID.has(order.status)) return null;
 
   const paid = payments.filter((payment) => payment.status === 'successful');
-  if (paid.length > 0 && paid.every((payment) => isTestPayment(payment.rawPayload))) return null;
+  if (paid.length > 0 && paid.every(isTestPayment)) return null;
 
   return (
     'This is a real paid order, so it is kept as a financial record. ' +

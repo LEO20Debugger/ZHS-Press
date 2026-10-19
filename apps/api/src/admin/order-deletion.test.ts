@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { deletionBlockedReason, isTestPayment } from './order-deletion';
 
-const sandbox = { status: 'successful', rawPayload: { object: 'checkout.session', livemode: false } };
-const live = { status: 'successful', rawPayload: { object: 'checkout.session', livemode: true } };
+const sandbox = { status: 'successful', provider: 'stripe', rawPayload: { object: 'checkout.session', livemode: false } };
+const live = { status: 'successful', provider: 'stripe', rawPayload: { object: 'checkout.session', livemode: true } };
+const flutterwave = { status: 'successful', provider: 'flutterwave', rawPayload: { status: 'success', data: { id: 1 } } };
 
 describe('deletionBlockedReason', () => {
   it('allows orders nobody paid for', () => {
@@ -22,6 +23,11 @@ describe('deletionBlockedReason', () => {
     expect(deletionBlockedReason({ status: 'refunded' }, [live])).not.toBeNull();
   });
 
+  it('allows a Flutterwave-era order, which was only ever test mode', () => {
+    expect(deletionBlockedReason({ status: 'paid' }, [flutterwave])).toBeNull();
+    expect(deletionBlockedReason({ status: 'fulfilled' }, [flutterwave])).toBeNull();
+  });
+
   it('refuses when real and sandbox payments are mixed', () => {
     // Any real money on the order makes it a record worth keeping.
     expect(deletionBlockedReason({ status: 'paid' }, [sandbox, live])).not.toBeNull();
@@ -31,17 +37,23 @@ describe('deletionBlockedReason', () => {
     // Guessing "test" wrongly would delete a genuine sale.
     expect(deletionBlockedReason({ status: 'paid' }, [])).not.toBeNull();
     expect(
-      deletionBlockedReason({ status: 'paid' }, [{ status: 'successful', rawPayload: { id: 123 } }]),
+      deletionBlockedReason({ status: 'paid' }, [{ status: 'successful', provider: 'stripe', rawPayload: { id: 123 } }]),
     ).not.toBeNull();
   });
 });
 
 describe('isTestPayment', () => {
-  it('is true only for an explicit livemode: false', () => {
-    expect(isTestPayment({ livemode: false })).toBe(true);
-    expect(isTestPayment({ livemode: true })).toBe(false);
-    expect(isTestPayment({})).toBe(false);
-    expect(isTestPayment(null)).toBe(false);
-    expect(isTestPayment('{"livemode":false}')).toBe(false);
+  const stripe = (rawPayload: unknown) => isTestPayment({ provider: 'stripe', rawPayload });
+
+  it('is true for Stripe only on an explicit livemode: false', () => {
+    expect(stripe({ livemode: false })).toBe(true);
+    expect(stripe({ livemode: true })).toBe(false);
+    expect(stripe({})).toBe(false);
+    expect(stripe(null)).toBe(false);
+    expect(stripe('{"livemode":false}')).toBe(false);
+  });
+
+  it('is true for any Flutterwave payment', () => {
+    expect(isTestPayment({ provider: 'flutterwave', rawPayload: null })).toBe(true);
   });
 });

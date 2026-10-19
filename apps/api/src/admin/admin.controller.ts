@@ -418,7 +418,7 @@ export class AdminController {
       orderBy: [desc(schema.orders.createdAt)],
       limit: ADMIN_PER_PAGE,
       offset: (pageNumber - 1) * ADMIN_PER_PAGE,
-      with: { items: true, payments: { columns: { status: true, rawPayload: true } } },
+      with: { items: true, payments: { columns: { status: true, provider: true, rawPayload: true } } },
     });
 
     /*
@@ -428,7 +428,7 @@ export class AdminController {
      */
     const items = rows.map(({ payments, ...order }) => ({
       ...order,
-      isTest: payments.some((p) => p.status === 'successful' && isTestPayment(p.rawPayload)),
+      isTest: payments.some((p) => p.status === 'successful' && isTestPayment(p)),
       deletable: deletionBlockedReason(order, payments) === null,
     }));
 
