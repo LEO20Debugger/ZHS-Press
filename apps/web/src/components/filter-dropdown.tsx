@@ -8,6 +8,8 @@ export interface FilterOption {
   href: string;
   label: string;
   current: boolean;
+  /** Said in the trigger on a phone, where half a row cannot fit the full label. */
+  shortLabel?: string;
   /** Shown before the label, in the trigger when selected and in the list. */
   icon?: React.ReactNode;
 }
@@ -55,13 +57,22 @@ export function FilterDropdown({
   if (!selected) return null;
 
   return (
-    <details ref={ref} className="group relative">
-      <summary className="flex cursor-pointer list-none items-center gap-2 rounded-pill border border-rule px-4 py-2 transition-colors duration-fast hover:border-ink [&::-webkit-details-marker]:hidden">
+    <details ref={ref} className="group relative min-w-0">
+      <summary className="flex w-full cursor-pointer list-none items-center gap-2 rounded-pill border border-rule px-3.5 py-2 transition-colors duration-fast sm:px-4 hover:border-ink [&::-webkit-details-marker]:hidden">
         {icon ?? selected.icon ? (
-          <span className="text-ink-muted">{icon ?? selected.icon}</span>
+          <span className="shrink-0 text-ink-muted">{icon ?? selected.icon}</span>
         ) : null}
-        <span className="eyebrow">{label}</span>
-        <span className="whitespace-nowrap text-small">{selected.label}</span>
+        <span className="eyebrow sr-only sm:not-sr-only">{label}</span>
+        <span className="min-w-0 flex-1 truncate text-left text-small sm:flex-none">
+          {selected.shortLabel ? (
+            <>
+              <span className="sm:hidden">{selected.shortLabel}</span>
+              <span className="hidden sm:inline">{selected.label}</span>
+            </>
+          ) : (
+            selected.label
+          )}
+        </span>
         {/* Turns over when open, so the control says which way it will go. */}
         <IconChevron
           size={14}

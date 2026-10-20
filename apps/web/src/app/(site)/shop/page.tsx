@@ -25,10 +25,10 @@ const FILTERS = [
 ] as const;
 
 const SORTS = [
-  { value: 'newest', label: 'Newest' },
-  { value: 'price_asc', label: 'Price, low to high' },
-  { value: 'price_desc', label: 'Price, high to low' },
-  { value: 'title', label: 'A–Z' },
+  { value: 'newest', label: 'Newest', short: 'Newest' },
+  { value: 'price_asc', label: 'Lowest price', short: 'Low price' },
+  { value: 'price_desc', label: 'Highest price', short: 'High price' },
+  { value: 'title', label: 'A–Z', short: 'A–Z' },
 ] as const;
 
 type SearchParams = Promise<{ category?: string; sort?: string }>;
@@ -68,6 +68,7 @@ export default async function ShopPage({ searchParams }: { searchParams: SearchP
   const sortOptions = SORTS.map((option) => ({
     href: sortHrefFor(option.value),
     label: option.label,
+    shortLabel: option.short,
     current: option.value === sort,
   }));
 
@@ -92,7 +93,7 @@ export default async function ShopPage({ searchParams }: { searchParams: SearchP
           row of pills you can read without opening anything is plainly better
           than one you have to.
         */}
-        <div className="shell flex items-center justify-between gap-3 py-3 sm:hidden">
+        <div className="shell grid grid-cols-2 gap-2 py-3 sm:hidden">
           <FilterDropdown
             label="Show"
             options={FILTERS.map((filter) => ({
