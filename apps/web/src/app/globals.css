@@ -153,6 +153,11 @@
     top: 0;
   }
 
+  /* The search panel settles into place when opened. */
+  .search-dialog[open] {
+    animation: page-enter 220ms var(--ease-out);
+  }
+
   /* A row that scrolls sideways by touch or trackpad without drawing a scrollbar. */
   .no-scrollbar {
     scrollbar-width: none;
@@ -479,6 +484,10 @@
   [data-site-header],
   .sticky-under-header {
     transition: none !important;
+  }
+
+  .search-dialog[open] {
+    animation: none !important;
   }
 }
 

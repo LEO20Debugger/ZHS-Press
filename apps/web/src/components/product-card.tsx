@@ -5,18 +5,10 @@ import type { ProductSummary } from '@zhs/shared';
 import { accentStyle, Sticker } from './primitives';
 import { QuickAdd } from './add-to-cart';
 import { Reveal } from './reveal';
+import { productHref } from '@/lib/product-href';
 
-/** Books, issues and stationery all live at the same URL shape as the shop. */
-export function productHref(product: Pick<ProductSummary, 'slug' | 'type'>): string {
-  switch (product.type) {
-    case 'book':
-      return `/books/${product.slug}`;
-    case 'magazine':
-      return `/magazine/${product.slug}`;
-    default:
-      return `/shop/${product.slug}`;
-  }
-}
+// Re-exported: pages import it from here alongside the card itself.
+export { productHref };
 
 /** The card's view cue names what it opens, so the shop grid doesn't call a journal a book. */
 const VIEW_LABELS: Partial<Record<ProductSummary['type'], string>> = {

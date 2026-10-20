@@ -250,3 +250,20 @@ export async function getRelatedProducts(
     .slice(0, limit)
     .map(({ item }) => item);
 }
+
+/**
+ * Every public product, for search.
+ *
+ * The public API pages at 60, so this walks the pages — capped at five, 300
+ * titles, well past the catalogue's size. Search is client-side over this
+ * list; if the catalogue ever outgrows the cap, search should move to the API.
+ */
+export async function listAllProducts(): Promise<ProductSummary[]> {
+  const first = await listProducts({ perPage: 60, page: 1 });
+  const rest = await Promise.all(
+    Array.from({ length: Math.min(first.totalPages, 5) - 1 }, (_, i) =>
+      listProducts({ perPage: 60, page: i + 2 }),
+    ),
+  );
+  return [first, ...rest].flatMap((page) => page.items);
+}

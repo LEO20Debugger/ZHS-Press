@@ -7,6 +7,7 @@ import { NewsletterForm } from './newsletter-form';
 import { DesktopNav } from './desktop-nav';
 import { HeaderAutoHide } from './header-auto-hide';
 import { MobileMenu } from './mobile-menu';
+import { SiteSearch } from './site-search';
 import { FOOTER_NAV } from './nav-items';
 
 const SOCIAL = [
@@ -51,7 +52,8 @@ export function SiteHeader() {
         */}
         <DesktopNav />
 
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-4 sm:gap-6">
+          <SiteSearch />
           <CartCount />
           <MobileMenu />
         </div>
