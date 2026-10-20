@@ -81,7 +81,12 @@ function LoginForm() {
 
 export default function AdminLoginPage() {
   return (
-    <div className="mx-auto max-w-sm py-16">
+    /*
+      Its own side gutter: this page sits outside the admin shell, whose
+      .shell padding gives every other admin page its margins. Without it the
+      form ran edge to edge on a phone. px-6 is the same 24px as .shell.
+    */
+    <div className="mx-auto w-full max-w-sm px-6 py-16 sm:max-w-md sm:px-8 sm:py-24">
       {/* alt="" — the heading below already names the page, so announcing the
           logo as well would just read the brand twice to a screen reader. */}
       <LogoMark className="h-8 w-auto text-ink" />
