@@ -1,16 +1,20 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { formatMoney } from '@zhs/shared';
+import { formatMoney, type ProductType } from '@zhs/shared';
 import {
   CoverPreview,
   useHasHover,
   type PreviewTarget,
 } from '@/components/admin/cover-preview';
 import { Pager, pageInfoOf, usePageNumber, type PageInfo } from '@/components/admin/pager';
+import { IconArchive, IconEdit, IconExternal, IconTrash } from '@/components/admin/icons';
+import { RowMenu } from '@/components/admin/row-menu';
 import { StockStepper } from '@/components/admin/stock-stepper';
 import { Button, Eyebrow, HandDrawnRule } from '@/components/primitives';
+import { productHref } from '@/lib/product-href';
 
 interface Row {
   id: number;
@@ -25,6 +29,9 @@ interface Row {
   images?: Array<{ url: string; alt: string }>;
 }
 
+/** Statuses the storefront shows, so "View in shop" has a page to open. */
+const SHOP_VISIBLE = new Set(['available', 'coming_soon', 'sold_out']);
+
 const STATUS_TONE: Record<string, string> = {
   available: 'bg-moss text-paper-raised',
   coming_soon: 'bg-marigold text-ink',
@@ -34,6 +41,7 @@ const STATUS_TONE: Record<string, string> = {
 };
 
 export default function AdminProductsPage() {
+  const router = useRouter();
   const [rows, setRows] = useState<Row[]>([]);
   const [search, setSearch] = useState('');
   // Remembered across the plain "Back to catalogue" link from a product.
@@ -305,16 +313,66 @@ export default function AdminProductsPage() {
                         ) : null}
                       </div>
                     ) : (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setConfirming(row.id);
-                          setError(null);
-                        }}
-                        className="font-ui text-caption text-ink-muted underline underline-offset-2 hover:text-danger"
-                      >
-                        Remove<span className="sr-only"> {row.title}</span>
-                      </button>
+                      /*
+                        The same ⋯ menu as the orders table, so every admin list
+                        acts the same way. View in shop only for a title the
+                        shop actually shows; Archive only if it is not archived
+                        already. Delete opens the confirm above, which keeps
+                        Archive beside it — a title that has sold cannot be
+                        deleted, and archiving is what to do instead.
+                      */
+                      <div className="flex flex-col items-end gap-1.5">
+                        <RowMenu
+                          label={`Actions for ${row.title}`}
+                          items={[
+                            {
+                              label: 'Edit product',
+                              icon: <IconEdit size={16} />,
+                              onSelect: () => router.push(`/admin/products/${row.id}`),
+                            },
+                            ...(SHOP_VISIBLE.has(row.status)
+                              ? [
+                                  {
+                                    label: 'View in shop',
+                                    icon: <IconExternal size={16} />,
+                                    onSelect: () => {
+                                      const href = productHref({
+                                        slug: row.slug,
+                                        type: row.type as ProductType,
+                                      });
+                                      window.open(href, '_blank', 'noopener');
+                                    },
+                                  },
+                                ]
+                              : []),
+                            ...(row.status !== 'archived'
+                              ? [
+                                  {
+                                    label: 'Archive',
+                                    icon: <IconArchive size={16} />,
+                                    onSelect: () => void archiveRow(row),
+                                  },
+                                ]
+                              : []),
+                            {
+                              label: 'Delete product',
+                              icon: <IconTrash size={16} />,
+                              danger: true,
+                              onSelect: () => {
+                                setConfirming(row.id);
+                                setError(null);
+                              },
+                            },
+                          ]}
+                        />
+                        {/* An archive chosen straight from the menu reports its
+                            failure here, since no confirm row is open to hold it. */}
+                        {error?.id === row.id ? (
+                          <p role="alert" className="max-w-[28ch] text-right font-ui text-caption text-danger">
+                            {error.message}
+                          </p>
+                        ) : null}
+                      </div>
                     )}
                   </td>
                 </tr>

@@ -2,10 +2,11 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { formatMoney } from '@zhs/shared';
-import { IconTrash, IconView } from '@/components/admin/icons';
+import { IconCheck, IconTrash, IconView } from '@/components/admin/icons';
 import { Modal } from '@/components/admin/modal';
 import { OrderDetailPanel } from '@/components/admin/order-detail';
 import { Pager, pageInfoOf, usePageNumber, type PageInfo } from '@/components/admin/pager';
+import { RowMenu } from '@/components/admin/row-menu';
 import { Eyebrow, HandDrawnRule } from '@/components/primitives';
 
 interface Order {
@@ -122,11 +123,19 @@ export default function AdminOrdersPage() {
         <p className="mt-8 text-small text-ink-muted">No orders yet.</p>
       ) : (
         <div className="mt-8 overflow-x-auto">
-          <table className="w-full border-collapse text-small sm:min-w-[720px]">
+          <table className="w-full border-collapse text-small sm:min-w-[820px]">
             <thead>
               <tr className="border-b border-ink text-left">
                 <th scope="col" className="py-3 pr-4 font-ui font-medium">
                   Order
+                </th>
+                {/*
+                  Its own column from sm. Below that the date rides under the
+                  order number instead — a phone has no room for another
+                  column, and the two are read together anyway.
+                */}
+                <th scope="col" className="hidden py-3 pr-4 font-ui font-medium sm:table-cell">
+                  Date
                 </th>
                 {/*
                   Email and the item count drop out below sm. An email address
@@ -178,6 +187,12 @@ export default function AdminOrdersPage() {
                     >
                       {order.orderNumber}
                     </button>
+                    <span className="mt-0.5 block whitespace-nowrap text-caption text-ink-muted sm:hidden">
+                      <OrderDate iso={order.createdAt} />
+                    </span>
+                  </td>
+                  <td className="hidden whitespace-nowrap py-3 pr-4 text-ink-muted sm:table-cell">
+                    <OrderDate iso={order.createdAt} />
                   </td>
                   <td className="hidden py-3 pr-4 text-ink-muted sm:table-cell">{order.email}</td>
                   <td className="hidden py-3 pr-4 text-ink-muted sm:table-cell">
@@ -230,71 +245,48 @@ export default function AdminOrdersPage() {
                         ) : null}
                       </div>
                     ) : (
-                      <div className="flex items-center justify-end gap-4">
-                        {/*
-                          Hidden below sm, where it wrapped onto two lines and
-                          crowded the icon beside it. Nothing is lost: the modal
-                          the icon opens carries the same action, so fulfilling
-                          from a phone is one extra tap rather than unavailable.
-                        */}
-                        {order.status === 'paid' ? (
-                          <button
-                            type="button"
-                            onClick={() => void fulfil(order.orderNumber)}
-                            className="link-underline hidden whitespace-nowrap text-caption sm:inline"
-                          >
-                            Mark fulfilled
-                          </button>
-                        ) : null}
-
-                        {/*
-                          The icon stands alone, so the accessible name lives on
-                          the button — and names the order rather than saying
-                          "View". A column of identical "View" buttons tells a
-                          screen-reader user nothing about which one they are on.
-                        */}
-                        <button
-                          type="button"
-                          onClick={() => setOpenOrder(order.orderNumber)}
-                          aria-haspopup="dialog"
-                          aria-label={`View order ${order.orderNumber}`}
-                          title="View order"
-                          className="p-1 text-ink-muted transition-colors hover:text-ink focus-visible:text-ink"
-                        >
-                          <IconView size={18} />
-                        </button>
-
-                        {/*
-                          Only offered where the API would allow it — unpaid and
-                          sandbox orders. A real sale shows no delete at all
-                          rather than a button that can only ever refuse.
-                        */}
-                        {/*
-                          An icon, like View beside it, so the two row actions
-                          read as a matching pair. Its name lives on the button
-                          and says which order — a column of identical "Delete"
-                          labels tells a screen-reader user nothing. The
-                          two-step confirm still follows in words, because that
-                          is the moment that must not be misread.
-                        */}
-                        {order.deletable ? (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setConfirming(order.orderNumber);
-                              setError(null);
-                            }}
-                            aria-label={`Delete order ${order.orderNumber}`}
-                            title="Delete order"
-                            className="p-1 text-ink-muted transition-colors hover:text-danger focus-visible:text-danger"
-                          >
-                            <IconTrash size={18} />
-                          </button>
-                        ) : (
-                          // Holds the column's width, so the View icons line up
-                          // down the table whether or not a row can be deleted.
-                          <span aria-hidden="true" className="inline-block w-[26px]" />
-                        )}
+                      /*
+                        Every row action behind one ⋯ button, so the column
+                        stays narrow and identical down the table however many
+                        actions a row has. Only the actions that apply are
+                        listed: Mark fulfilled for a paid order, Delete only
+                        where the API would allow it — a real sale never shows a
+                        delete that could only refuse. Delete still goes through
+                        the two-step confirm above, in words.
+                      */
+                      <div className="flex justify-end">
+                        <RowMenu
+                          label={`Actions for order ${order.orderNumber}`}
+                          items={[
+                            {
+                              label: 'View order',
+                              icon: <IconView size={16} />,
+                              onSelect: () => setOpenOrder(order.orderNumber),
+                            },
+                            ...(order.status === 'paid'
+                              ? [
+                                  {
+                                    label: 'Mark fulfilled',
+                                    icon: <IconCheck size={16} />,
+                                    onSelect: () => void fulfil(order.orderNumber),
+                                  },
+                                ]
+                              : []),
+                            ...(order.deletable
+                              ? [
+                                  {
+                                    label: 'Delete order',
+                                    icon: <IconTrash size={16} />,
+                                    danger: true,
+                                    onSelect: () => {
+                                      setConfirming(order.orderNumber);
+                                      setError(null);
+                                    },
+                                  },
+                                ]
+                              : []),
+                          ]}
+                        />
                       </div>
                     )}
                   </td>
@@ -332,5 +324,23 @@ export default function AdminOrdersPage() {
         ) : null}
       </Modal>
     </div>
+  );
+}
+
+const DAY = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+const FULL = new Intl.DateTimeFormat('en-GB', { dateStyle: 'full', timeStyle: 'short' });
+
+/**
+ * When the order was placed: "27 Oct 2026" in the table, the full date and
+ * time on hover. Day-first, which reads unambiguously wherever the admin is —
+ * "04/05" is April in one country and May in another; "4 May" is May everywhere.
+ */
+function OrderDate({ iso }: { iso: string }) {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return null;
+  return (
+    <time dateTime={iso} title={FULL.format(date)}>
+      {DAY.format(date)}
+    </time>
   );
 }

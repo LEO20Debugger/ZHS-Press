@@ -107,6 +107,47 @@ export function IconSettings(props: IconProps) {
   );
 }
 
+/** Edit: a pencil. */
+export function IconEdit(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M15.5 5.5l3 3L9 18H6v-3l9.5-9.5Z" />
+      <path d="M13.5 7.5l3 3" />
+    </Svg>
+  );
+}
+
+/** Archive: a lidded box, put away rather than thrown out. */
+export function IconArchive(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <rect x="3.5" y="4.5" width="17" height="4" />
+      <path d="M5 8.5V19h14V8.5" />
+      <path d="M10 12.5h4" />
+    </Svg>
+  );
+}
+
+/** Done: a tick, for marking an order fulfilled. */
+export function IconCheck(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="m5 12.5 4.5 4.5L19 7.5" />
+    </Svg>
+  );
+}
+
+/** More actions: three dots, for a row's menu. */
+export function IconMore(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <circle cx="5" cy="12" r="1.25" fill="currentColor" />
+      <circle cx="12" cy="12" r="1.25" fill="currentColor" />
+      <circle cx="19" cy="12" r="1.25" fill="currentColor" />
+    </Svg>
+  );
+}
+
 /** Delete: a bin, lid on. */
 export function IconTrash(props: IconProps) {
   return (
