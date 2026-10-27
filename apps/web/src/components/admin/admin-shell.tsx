@@ -133,6 +133,36 @@ export function AdminShell({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [menuOpen]);
 
+  /*
+   * Hold the page still while the phone menu covers it. Without this, a swipe
+   * on the menu scrolled the page underneath instead, and closing the menu
+   * showed a different part of the page from the one it was opened over.
+   */
+  useEffect(() => {
+    if (!menuOpen) return;
+    const root = document.documentElement;
+    const previous = root.style.overflow;
+    root.style.overflow = 'hidden';
+    return () => {
+      root.style.overflow = previous;
+    };
+  }, [menuOpen]);
+
+  /*
+   * The menu is phone-only. Turning a tablet to landscape, or widening a
+   * window past the breakpoint with it open, would otherwise leave the page
+   * locked behind a menu that CSS has hidden.
+   */
+  useEffect(() => {
+    if (!menuOpen) return;
+    const wide = window.matchMedia('(min-width: 768px)');
+    const onChange = () => {
+      if (wide.matches) setMenuOpen(false);
+    };
+    wide.addEventListener('change', onChange);
+    return () => wide.removeEventListener('change', onChange);
+  }, [menuOpen]);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -333,20 +363,29 @@ export function AdminShell({ children }: { children: ReactNode }) {
         </div>
 
         {/*
-          The phone menu. Rendered only when open rather than hidden with CSS,
-          so its links stay out of the tab order while it is closed. Scrolls on
-          its own if a short phone cannot fit every link.
+          The phone menu, full screen under the top bar.
+
+          It used to drop down only as far as its links reached, leaving the
+          page visible — and scrollable — beneath it, which read as a menu that
+          had not finished opening. Now it covers everything below the bar, and
+          the page behind is held still while it is open (see the scroll-lock
+          effect above), so closing it returns the reader exactly where they
+          were. Links at the top, account actions pinned to the foot, as in the
+          desktop sidebar. Scrolls within itself on a phone too short for it all.
+
+          Rendered only when open rather than hidden with CSS, so its links
+          stay out of the tab order while it is closed.
         */}
         {menuOpen ? (
           <nav
             id="admin-menu"
             aria-label="Admin"
-            className="max-h-[calc(100dvh-3.5rem)] overflow-y-auto border-t border-rule bg-paper py-4 md:hidden"
+            className="fixed inset-x-0 bottom-0 top-14 z-30 flex flex-col overflow-y-auto overscroll-contain bg-paper py-4 md:hidden"
           >
             {navGroups(false)}
             {settings ? <div className="mt-5">{navLink(settings, false)}</div> : null}
 
-            <div className="mt-4 border-t border-rule px-[22px] pt-4">
+            <div className="mt-auto border-t border-rule px-[22px] pt-4">
               <p className="text-caption text-ink-muted">
                 {user.name} · <span className="uppercase tracking-wide">{user.role}</span>
               </p>

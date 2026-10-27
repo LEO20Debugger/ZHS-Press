@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import type { ProductType } from '@zhs/shared';
 import { FilterDropdown } from '@/components/filter-dropdown';
 import { IconBooks, IconGrid, IconMagazine, IconSort, IconStationery } from '@/components/nav-icons';
@@ -85,15 +84,15 @@ export default async function ShopPage({ searchParams }: { searchParams: SearchP
 
       <div className="bar-frosted sticky-under-header sticky z-40 border-y border-rule">
         {/*
-          Two presentations of one set of controls.
+          One set of controls at every width: Show on the left, the count and
+          Sort on the right — the same pair of dropdowns, so choosing a category
+          and choosing an order work alike.
 
-          Below sm they are dropdowns: laid out flat, the pills wrap to two rows
-          and the sort row to a third, which pinned 170px of a phone screen to
-          filtering a nine-item catalogue. Above sm the width is there, and a
-          row of pills you can read without opening anything is plainly better
-          than one you have to.
+          On a phone they split the row into two equal halves and the count
+          steps aside; the selected option is written on each trigger, so what
+          is being shown is still readable without opening anything.
         */}
-        <div className="shell grid grid-cols-2 gap-2 py-3 sm:hidden">
+        <div className="shell grid grid-cols-2 gap-2 py-3 sm:flex sm:items-center sm:justify-between sm:gap-4">
           <FilterDropdown
             label="Show"
             options={FILTERS.map((filter) => ({
@@ -103,61 +102,19 @@ export default async function ShopPage({ searchParams }: { searchParams: SearchP
               icon: <filter.Icon size={16} />,
             }))}
           />
-          <FilterDropdown
-            label="Sort"
-            align="right"
-            icon={<IconSort size={16} />}
-            options={sortOptions}
-          />
-        </div>
 
-        <div className="shell hidden items-center justify-between gap-4 py-3 sm:flex">
-          {/*
-            One row at every width. Between tablet and desktop the four chips
-            and the sort control do not quite fit side by side; wrapping them
-            doubled the height of a bar that stays on screen the whole visit.
-            The chips scroll sideways instead, and Sort stays put.
-          */}
-          <nav aria-label="Filter by category" className="-my-1 min-w-0 py-1">
-            <ul className="no-scrollbar flex gap-2 overflow-x-auto pr-8 [mask-image:linear-gradient(to_right,black_calc(100%-2.5rem),transparent)] lg:pr-0 lg:[mask-image:none]">
-              {FILTERS.map((filter) => {
-                const active = filter.value === category;
-                return (
-                  <li key={filter.label} className="shrink-0">
-                    <Link
-                      href={hrefFor(filter.value)}
-                      aria-current={active ? 'page' : undefined}
-                      className={`inline-flex items-center gap-2 rounded-pill py-2 pl-3.5 pr-4 font-ui text-small transition-colors duration-base ${
-                        active
-                          ? 'bg-ink text-paper'
-                          : 'border border-rule text-ink-muted hover:border-ink hover:text-ink'
-                      }`}
-                    >
-                      <filter.Icon size={16} />
-                      {filter.label}
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          </nav>
-
-          {/*
-            Sort is one control rather than four links: the choice is made
-            rarely, and laid out flat it took half the bar and competed with the
-            categories for attention. The count sits beside it, so the result of
-            a filter is readable without scrolling.
-          */}
-          <div className="flex shrink-0 items-center gap-4">
-            <p className="whitespace-nowrap text-caption text-ink-muted">
+          <div className="flex min-w-0 items-center justify-end gap-4">
+            <p className="hidden whitespace-nowrap text-caption text-ink-muted sm:block">
               {total} {total === 1 ? 'item' : 'items'}
             </p>
-            <FilterDropdown
-              label="Sort"
-              align="right"
-              icon={<IconSort size={16} />}
-              options={sortOptions}
-            />
+            <div className="min-w-0 flex-1 sm:flex-none">
+              <FilterDropdown
+                label="Sort"
+                align="right"
+                icon={<IconSort size={16} />}
+                options={sortOptions}
+              />
+            </div>
           </div>
         </div>
       </div>
