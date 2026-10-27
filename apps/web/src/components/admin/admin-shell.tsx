@@ -373,6 +373,12 @@ export function AdminShell({ children }: { children: ReactNode }) {
           were. Links at the top, account actions pinned to the foot, as in the
           desktop sidebar. Scrolls within itself on a phone too short for it all.
 
+          Sized to the large viewport (lvh) rather than pinned with bottom-0:
+          Safari on iOS 26 floats its toolbar over the page, and bottom-0 stops
+          at the toolbar's top edge, so the page showed through beneath it. The
+          bottom padding (lvh − dvh, the toolbar's height while it is showing)
+          keeps Sign out clear of the toolbar.
+
           Rendered only when open rather than hidden with CSS, so its links
           stay out of the tab order while it is closed.
         */}
@@ -380,7 +386,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
           <nav
             id="admin-menu"
             aria-label="Admin"
-            className="fixed inset-x-0 bottom-0 top-14 z-30 flex flex-col overflow-y-auto overscroll-contain bg-paper py-4 md:hidden"
+            className="fixed inset-x-0 top-14 z-30 flex h-[calc(100lvh-3.5rem)] flex-col overflow-y-auto overscroll-contain bg-paper pb-[calc(100lvh-100dvh+1rem)] pt-4 md:hidden"
           >
             {navGroups(false)}
             {settings ? <div className="mt-5">{navLink(settings, false)}</div> : null}
