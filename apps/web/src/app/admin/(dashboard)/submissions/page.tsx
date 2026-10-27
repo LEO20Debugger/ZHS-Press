@@ -1,8 +1,17 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { IconCheck, IconClose, IconSubmissions, IconView } from '@/components/admin/icons';
 import { Pager, pageInfoOf, usePageNumber, type PageInfo } from '@/components/admin/pager';
+import { RowMenu } from '@/components/admin/row-menu';
 import { Eyebrow, HandDrawnRule } from '@/components/primitives';
+
+/** The decisions a submission moves through, as menu items. */
+const STATUSES = [
+  { value: 'reviewing', label: 'Mark reviewing', icon: <IconView size={16} /> },
+  { value: 'accepted', label: 'Mark accepted', icon: <IconCheck size={16} /> },
+  { value: 'declined', label: 'Mark declined', icon: <IconClose size={16} /> },
+] as const;
 
 interface Submission {
   id: number;
@@ -65,41 +74,65 @@ export default function AdminSubmissionsPage() {
         <ul className="mt-8 divide-y divide-rule border-y border-rule">
           {items.map((item) => (
             <li key={item.id} className="py-5">
-              <div className="flex flex-wrap items-baseline justify-between gap-3">
-                <div>
-                  <h2 className="font-display text-h3">{item.title}</h2>
-                  <p className="mt-1 text-small text-ink-muted">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  {/*
+                    The title opens the synopsis, so reading — the thing done
+                    most here — stays one click. A real button with
+                    aria-expanded, so a screen reader announces it as a toggle.
+                  */}
+                  <h2 className="font-display text-h3">
+                    <button
+                      type="button"
+                      onClick={() => setOpen(open === item.id ? null : item.id)}
+                      aria-expanded={open === item.id}
+                      aria-controls={`submission-${item.id}`}
+                      className="link-underline text-left"
+                    >
+                      {item.title}
+                    </button>
+                  </h2>
+                  <p className="mt-1 break-words text-small text-ink-muted">
                     {item.name} · {item.email} · {item.genre.replace('_', '-')}
                   </p>
                 </div>
-                <div className="flex items-center gap-3 text-caption">
+                <div className="flex shrink-0 items-center gap-2 text-caption">
                   <span className="rounded-pill bg-paper-deep px-2 py-0.5">{item.status}</span>
-                  <button
-                    type="button"
-                    onClick={() => setOpen(open === item.id ? null : item.id)}
-                    aria-expanded={open === item.id}
-                    className="link-underline"
-                  >
-                    {open === item.id ? 'Hide' : 'Read'}
-                  </button>
+                  {/*
+                    The same ⋯ menu as orders and the catalogue. The status
+                    options leave out the one the submission already has, so
+                    every choice in the menu changes something.
+                  */}
+                  <RowMenu
+                    label={`Actions for “${item.title}”`}
+                    items={[
+                      {
+                        label: open === item.id ? 'Hide synopsis' : 'Read synopsis',
+                        icon: <IconView size={16} />,
+                        onSelect: () => setOpen(open === item.id ? null : item.id),
+                      },
+                      {
+                        label: 'Email writer',
+                        icon: <IconSubmissions size={16} />,
+                        onSelect: () => {
+                          window.location.href = `mailto:${item.email}?subject=${encodeURIComponent(
+                            `Your submission: ${item.title}`,
+                          )}`;
+                        },
+                      },
+                      ...STATUSES.filter((status) => status.value !== item.status).map((status) => ({
+                        label: status.label,
+                        icon: status.icon,
+                        onSelect: () => void setStatus(item.id, status.value),
+                      })),
+                    ]}
+                  />
                 </div>
               </div>
 
               {open === item.id ? (
-                <div className="mt-4">
+                <div id={`submission-${item.id}`} className="mt-4">
                   <p className="prose-editorial whitespace-pre-wrap">{item.synopsis}</p>
-                  <div className="mt-4 flex flex-wrap gap-4 text-caption">
-                    {(['reviewing', 'accepted', 'declined'] as const).map((status) => (
-                      <button
-                        key={status}
-                        type="button"
-                        onClick={() => void setStatus(item.id, status)}
-                        className="link-underline"
-                      >
-                        Mark {status}
-                      </button>
-                    ))}
-                  </div>
                 </div>
               ) : null}
             </li>

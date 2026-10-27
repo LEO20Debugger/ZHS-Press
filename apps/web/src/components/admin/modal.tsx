@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, type ReactNode } from 'react';
+import { IconClose } from './icons';
 
 /**
  * A modal built on the native `<dialog>` element.
@@ -126,6 +127,26 @@ export function Modal({
         next time the dialog is opened on a different one.
       */}
       {open ? children : null}
+
+      {/*
+        A visible way out. Escape and a backdrop click both close the dialog,
+        but neither is discoverable — and a phone has no Escape key at all.
+        Pinned to the dialog's corner, above content that scrolls inside it, so
+        it stays in reach however far down a long order the reader has gone.
+        After the content in the DOM, so the first Tab lands on the dialog's own
+        controls rather than on Close.
+      */}
+      {open ? (
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close"
+          title="Close"
+          className="absolute right-3 top-3 z-20 flex min-h-[40px] min-w-[40px] items-center justify-center rounded-sm text-ink-muted transition-colors hover:bg-paper-deep hover:text-ink focus-visible:text-ink"
+        >
+          <IconClose size={20} />
+        </button>
+      ) : null}
     </dialog>
   );
 }

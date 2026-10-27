@@ -127,7 +127,7 @@ export function OrderDetailPanel({
 
   return (
     <div className="max-h-[85vh] overflow-y-auto">
-      <div className="sticky top-0 flex items-baseline justify-between gap-4 border-b border-rule bg-paper-raised px-6 py-4">
+      <div className="sticky top-0 flex items-baseline justify-between gap-4 border-b border-rule bg-paper-raised py-4 pl-6 pr-16">
         <div>
           <h2 className="font-display text-h3">{order.orderNumber}</h2>
           <p className="mt-0.5 text-caption text-ink-muted">{when(order.createdAt)}</p>

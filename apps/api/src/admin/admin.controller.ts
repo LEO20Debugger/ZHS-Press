@@ -18,7 +18,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
-import { and, count, desc, eq } from 'drizzle-orm';
+import { and, count, desc, eq, gte, like, lte, or, type SQL } from 'drizzle-orm';
 import { Inject } from '@nestjs/common';
 import { schema, type Database } from '@zhs/db';
 import {
@@ -404,9 +404,15 @@ export class AdminController {
 
   @Get('orders')
   @Roles('admin')
-  async listOrders(@Query('status') status?: string, @Query('page') page?: string) {
+  async listOrders(
+    @Query('status') status?: string,
+    @Query('page') page?: string,
+    @Query('search') search?: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+  ) {
     const pageNumber = toPage(page);
-    const where = status ? eq(schema.orders.status, status as 'paid') : undefined;
+    const where = orderFilters({ status, search, from, to });
 
     const [{ value: total } = { value: 0 }] = await this.db
       .select({ value: count() })
@@ -580,4 +586,46 @@ export class AdminController {
       },
     };
   }
+}
+
+/**
+ * The orders list's filters, as one WHERE clause.
+ *
+ * `search` matches an email or an order number, by substring and without
+ * regard to case — whichever the admin has in hand from a customer's message.
+ * `from` and `to` are instants, not calendar days: the admin page turns "Today"
+ * or a picked date into the start and end of that day in the admin's own time
+ * zone before sending, so the server never has to guess which zone a day is in.
+ *
+ * Bad input narrows to nothing rather than erroring: an unparseable date is
+ * ignored, and a search is capped at 100 characters.
+ */
+export function orderFilters(input: {
+  status?: string;
+  search?: string;
+  from?: string;
+  to?: string;
+}): SQL | undefined {
+  const filters: SQL[] = [];
+
+  if (input.status) filters.push(eq(schema.orders.status, input.status as 'paid'));
+
+  const term = input.search?.trim().slice(0, 100);
+  if (term) {
+    // LIKE wildcards in the term are matched literally, not as patterns.
+    const pattern = `%${term.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
+    const match = or(like(schema.orders.email, pattern), like(schema.orders.orderNumber, pattern));
+    if (match) filters.push(match);
+  }
+
+  const fromDate = input.from ? new Date(input.from) : null;
+  if (fromDate && !Number.isNaN(fromDate.getTime())) {
+    filters.push(gte(schema.orders.createdAt, fromDate));
+  }
+  const toDate = input.to ? new Date(input.to) : null;
+  if (toDate && !Number.isNaN(toDate.getTime())) {
+    filters.push(lte(schema.orders.createdAt, toDate));
+  }
+
+  return filters.length > 0 ? and(...filters) : undefined;
 }

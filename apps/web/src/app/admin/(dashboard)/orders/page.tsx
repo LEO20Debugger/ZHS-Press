@@ -1,12 +1,13 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { formatMoney } from '@zhs/shared';
 import { IconCheck, IconTrash, IconView } from '@/components/admin/icons';
 import { Modal } from '@/components/admin/modal';
 import { OrderDetailPanel } from '@/components/admin/order-detail';
 import { Pager, pageInfoOf, usePageNumber, type PageInfo } from '@/components/admin/pager';
 import { RowMenu } from '@/components/admin/row-menu';
+import { IconSearch } from '@/components/nav-icons';
 import { Eyebrow, HandDrawnRule } from '@/components/primitives';
 
 interface Order {
@@ -39,9 +40,54 @@ export default function AdminOrdersPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<{ orderNumber: string; message: string } | null>(null);
 
+  // Filters. The search box is debounced so typing an email does not send a
+  // request per keystroke; the date choices apply at once.
+  const [searchInput, setSearchInput] = useState('');
+  const [search, setSearch] = useState('');
+  const [range, setRange] = useState<RangeValue>('all');
+  const [customFrom, setCustomFrom] = useState('');
+  const [customTo, setCustomTo] = useState('');
+  const filtered = search !== '' || range !== 'all';
+  const latestRequest = useRef(0);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setSearch(searchInput.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
+  /*
+   * A changed filter starts from its own first page — page 3 of the old
+   * results means nothing in the new ones. Skipped on mount, so the page
+   * remembered from the last visit is kept.
+   */
+  const filterKey = `${search}|${range}|${customFrom}|${customTo}`;
+  const firstFilterKey = useRef(filterKey);
+  useEffect(() => {
+    if (filterKey === firstFilterKey.current) return;
+    firstFilterKey.current = filterKey;
+    setPage(1);
+    setConfirming(null);
+  }, [filterKey, setPage]);
+
   const load = useCallback(async () => {
     if (page == null) return;
-    const response = await fetch(`/api/admin/admin/orders?page=${page}`, { cache: 'no-store' });
+    const params = new URLSearchParams({ page: String(page) });
+    if (search) params.set('search', search);
+    const { from, to } = rangeBounds(range, customFrom, customTo);
+    if (from) params.set('from', from);
+    if (to) params.set('to', to);
+
+    /*
+     * Only the newest request may update the table. Changing a filter fires
+     * one request for the new filter and another for its page 1 a moment
+     * later; if the first came back last, it would overwrite the right
+     * results with stale ones.
+     */
+    const requestId = ++latestRequest.current;
+    const response = await fetch(`/api/admin/admin/orders?${params.toString()}`, {
+      cache: 'no-store',
+    });
+    if (requestId !== latestRequest.current) return;
 
     // An editor reaching this route gets a 403 from the API, not an empty
     // list. Hiding the nav link is presentation; this is the actual boundary.
@@ -63,7 +109,15 @@ export default function AdminOrdersPage() {
     setOrders(body?.items ?? []);
     setInfo(pageInfo);
     setState('ready');
-  }, [page, setPage]);
+  }, [page, setPage, search, range, customFrom, customTo]);
+
+  function clearFilters() {
+    setSearchInput('');
+    setSearch('');
+    setRange('all');
+    setCustomFrom('');
+    setCustomTo('');
+  }
 
   useEffect(() => {
     void load();
@@ -117,10 +171,99 @@ export default function AdminOrdersPage() {
       <h1 className="mt-3 font-display text-display">Orders</h1>
       <HandDrawnRule className="mt-4 max-w-[180px] text-terracotta" />
 
+      {/*
+        Filters. One row from sm, stacked full-width on a phone, where a row
+        of three controls would leave each too narrow to use. A custom range
+        adds its two date pickers on a line of their own beneath.
+      */}
+      <div role="search" aria-label="Filter orders" className="mt-8 space-y-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <label className="flex min-w-0 flex-1 items-center gap-2.5 border border-rule bg-paper-raised px-4 focus-within:border-ink sm:max-w-md">
+            <IconSearch size={18} className="text-ink-muted" />
+            <span className="sr-only">Search by email or order number</span>
+            <input
+              type="search"
+              value={searchInput}
+              onChange={(event) => setSearchInput(event.target.value)}
+              placeholder="Search email or order number"
+              autoComplete="off"
+              spellCheck={false}
+              className="field-control w-full bg-transparent py-2.5 font-ui text-small focus:outline-none"
+            />
+          </label>
+
+          <label className="flex items-center gap-2.5 sm:w-56">
+            <span className="sr-only">Date</span>
+            <select
+              value={range}
+              onChange={(event) => setRange(event.target.value as RangeValue)}
+              className="field-control w-full border border-rule bg-paper-raised px-4 py-2.5 font-ui text-small focus:border-ink focus:outline-none"
+            >
+              {RANGES.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          {filtered ? (
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="link-underline self-start whitespace-nowrap font-ui text-caption text-ink-muted hover:text-ink sm:self-center"
+            >
+              Clear filters
+            </button>
+          ) : null}
+        </div>
+
+        {range === 'custom' ? (
+          <div className="grid grid-cols-2 gap-3 sm:flex sm:items-center">
+            <label className="block">
+              <span className="eyebrow block">From</span>
+              <input
+                type="date"
+                value={customFrom}
+                max={customTo || undefined}
+                onChange={(event) => setCustomFrom(event.target.value)}
+                className="field-control mt-1 w-full border border-rule bg-paper-raised px-3 py-2 font-ui text-small focus:border-ink focus:outline-none sm:w-44"
+              />
+            </label>
+            <label className="block">
+              <span className="eyebrow block">To</span>
+              <input
+                type="date"
+                value={customTo}
+                min={customFrom || undefined}
+                onChange={(event) => setCustomTo(event.target.value)}
+                className="field-control mt-1 w-full border border-rule bg-paper-raised px-3 py-2 font-ui text-small focus:border-ink focus:outline-none sm:w-44"
+              />
+            </label>
+          </div>
+        ) : null}
+
+        {/* What the filters found, so an empty-looking page is never a mystery. */}
+        {filtered && state === 'ready' ? (
+          <p role="status" className="text-caption text-ink-muted">
+            {info?.total ?? orders.length} {(info?.total ?? orders.length) === 1 ? 'order' : 'orders'} found
+          </p>
+        ) : null}
+      </div>
+
       {state === 'loading' ? (
         <p className="mt-8 text-small text-ink-muted">Loading…</p>
       ) : orders.length === 0 ? (
-        <p className="mt-8 text-small text-ink-muted">No orders yet.</p>
+        filtered ? (
+          <p className="mt-8 text-small text-ink-muted">
+            No orders match these filters.{' '}
+            <button type="button" onClick={clearFilters} className="link-underline text-ink">
+              Clear filters
+            </button>
+          </p>
+        ) : (
+          <p className="mt-8 text-small text-ink-muted">No orders yet.</p>
+        )
       ) : (
         <div className="mt-8 overflow-x-auto">
           <table className="w-full border-collapse text-small sm:min-w-[820px]">
@@ -343,4 +486,59 @@ function OrderDate({ iso }: { iso: string }) {
       {DAY.format(date)}
     </time>
   );
+}
+
+const RANGES = [
+  { value: 'all', label: 'All time' },
+  { value: 'today', label: 'Today' },
+  { value: '7d', label: 'Last 7 days' },
+  { value: '30d', label: 'Last 30 days' },
+  { value: 'month', label: 'This month' },
+  { value: 'custom', label: 'Custom range' },
+] as const;
+
+type RangeValue = (typeof RANGES)[number]['value'];
+
+/**
+ * A date choice as the instants the API filters between.
+ *
+ * Worked out here, in the admin's browser, so "Today" and a picked date mean
+ * the admin's own calendar day — midnight to midnight where they are, not on
+ * the server's clock. A custom range can be open at either end.
+ */
+function rangeBounds(range: RangeValue, customFrom: string, customTo: string) {
+  const now = new Date();
+  const startOf = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const daysAgo = (days: number) => {
+    const start = startOf(now);
+    start.setDate(start.getDate() - days);
+    return start;
+  };
+
+  let from: Date | null = null;
+  let to: Date | null = null;
+
+  switch (range) {
+    case 'today':
+      from = startOf(now);
+      break;
+    case '7d':
+      from = daysAgo(6);
+      break;
+    case '30d':
+      from = daysAgo(29);
+      break;
+    case 'month':
+      from = new Date(now.getFullYear(), now.getMonth(), 1);
+      break;
+    case 'custom':
+      // "YYYY-MM-DD" with a time and no zone is read as local time.
+      if (customFrom) from = new Date(`${customFrom}T00:00:00`);
+      if (customTo) to = new Date(`${customTo}T23:59:59.999`);
+      break;
+    default:
+      break;
+  }
+
+  return { from: from?.toISOString(), to: to?.toISOString() };
 }
